@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import base64
@@ -6,12 +7,12 @@ from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain.tools import tool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.tools import tool
+
+from util.logger import setup_logger
 
 load_dotenv()
-logger = logging.getLogger(__name__)
+logger = setup_logger('agent', log_file='logs/agent.log', level=logging.DEBUG)
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
@@ -27,6 +28,12 @@ GEMINI_API_KEYS = [
     os.environ["GEMINI_API_KEY_3"],
 ]
 
+# Faster than Pro — default is Flash Lite. Override in .env if your key rejects it:
+#   GEMINI_CHAT_MODEL=gemini-3-flash-preview
+GEMINI_CHAT_MODEL = os.environ.get(
+    "GEMINI_CHAT_MODEL", "gemini-3.1-flash-lite-preview"
+)
+
 _QUOTA_ERRORS = ("429", "ResourceExhausted", "RESOURCE_EXHAUSTED", "quota", "billing")
 
 
@@ -40,11 +47,13 @@ class GeminiKeyManager:
         self._llm = self._build(0)
 
     def _build(self, i: int) -> ChatGoogleGenerativeAI:
-        logger.info(f"Gemini: activating key slot {i + 1}")
+        logger.info(f"Gemini: key slot {i + 1}  model={GEMINI_CHAT_MODEL}")
         return ChatGoogleGenerativeAI(
-            model="gemini-3.0",
+            model=GEMINI_CHAT_MODEL,
             google_api_key=self.keys[i],
             temperature=0.2,
+            # Short JSON correction — smaller cap = faster responses than Pro / huge defaults
+            max_output_tokens=1024,
         )
 
     def _is_quota(self, exc: Exception) -> bool:
@@ -80,6 +89,30 @@ class GeminiKeyManager:
 
 
 key_manager = GeminiKeyManager(GEMINI_API_KEYS)
+
+
+def _message_content_to_str(content) -> str:
+    """LangChain / Gemini may return str or a list of blocks — normalize to str."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                t = block.get("text")
+                if isinstance(t, str):
+                    parts.append(t)
+                else:
+                    parts.append(str(block))
+            else:
+                text_attr = getattr(block, "text", None)
+                parts.append(text_attr if isinstance(text_attr, str) else str(block))
+        return "".join(parts)
+    return str(content)
 
 
 # ─── Scribe v2 keyterm lists per condition ───────────────────────────────────
@@ -141,7 +174,11 @@ def transcribe_audio(audio_b64: str, condition: str) -> dict:
         audio_b64: Base64-encoded audio (webm/wav/mp3).
         condition: One of 'dysarthria', 'stuttering', 'aphasia', 'general'.
     """
+    import time
+    t_start = time.time()
+    
     audio_bytes = base64.b64decode(audio_b64)
+    logger.debug(f"Transcribing {len(audio_bytes)} bytes [{condition}]")
 
     # Pick the keyterm list for this condition (fall back to general)
     keyterms = _KEYTERMS.get(condition, _KEYTERMS["general"])
@@ -160,9 +197,10 @@ def transcribe_audio(audio_b64: str, condition: str) -> dict:
     )
 
     transcript = (result.text or "").strip()
+    elapsed = time.time() - t_start
     logger.info(
-        f"Scribe [{condition}] transcript: '{transcript[:100]}'"
-        f"  keyterms_used={len(keyterms)}"
+        f"Scribe [{condition}] transcript: '{transcript[:100]}' "
+        f"keyterms={len(keyterms)} elapsed={elapsed:.3f}s"
     )
     return {"raw_transcript": transcript}
 
@@ -180,6 +218,10 @@ def correct_speech(raw_transcript: str, condition: str) -> dict:
         raw_transcript: The raw text output from transcribe_audio.
         condition: Speech condition — helps Gemini apply the right corrections.
     """
+    import time
+    t_start = time.time()
+    logger.debug(f"Starting correction [{condition}]: '{raw_transcript[:80]}'")
+    
     condition_hints = {
         "dysarthria": (
             "Dysarthria causes slurred, slow, or mumbled speech. "
@@ -227,17 +269,26 @@ Respond ONLY with valid JSON in this exact format:
 
     response = key_manager.invoke(prompt)
 
-    raw = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    raw = (
+        _message_content_to_str(response.content)
+        .strip()
+        .removeprefix("```json")
+        .removeprefix("```")
+        .removesuffix("```")
+        .strip()
+    )
 
     try:
         parsed = json.loads(raw)
+        elapsed = time.time() - t_start
         logger.info(
             f"Correction: '{parsed.get('corrected_text', '')[:80]}' "
-            f"confidence={parsed.get('confidence', 0)}"
+            f"confidence={parsed.get('confidence', 0)} elapsed={elapsed:.3f}s"
         )
         return parsed
     except json.JSONDecodeError:
-        logger.warning(f"Gemini returned non-JSON: {raw[:200]}")
+        elapsed = time.time() - t_start
+        logger.warning(f"Gemini returned non-JSON: {raw[:200]} elapsed={elapsed:.3f}s")
         return {
             "corrected_text": raw_transcript,
             "confidence": 0.4,
@@ -257,6 +308,10 @@ def synthesise_voice(text: str, voice_id: str = DEFAULT_VOICE_ID) -> dict:
         text: The corrected sentence to speak.
         voice_id: ElevenLabs voice ID.
     """
+    import time
+    t_start = time.time()
+    logger.debug(f"Synthesising: '{text[:80]}'")
+    
     # ElevenLabs SDK — text_to_speech.convert()
     # Returns a generator of audio chunks — join them into bytes
     audio_chunks = eleven.text_to_speech.convert(
@@ -272,42 +327,64 @@ def synthesise_voice(text: str, voice_id: str = DEFAULT_VOICE_ID) -> dict:
     )
 
     audio_bytes = b"".join(audio_chunks)
+    elapsed = time.time() - t_start
+    logger.info(f"TTS generated {len(audio_bytes)} bytes in {elapsed:.3f}s")
+    
     return {
         "audio_b64": base64.b64encode(audio_bytes).decode(),
         "format": "mp3",
     }
 
 
-# ─── Agent ────────────────────────────────────────────────────────────────────
-
-tools = [transcribe_audio, correct_speech, synthesise_voice]
-
-_prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are SpeechBridge. You help people with speech disabilities communicate clearly.
-
-For every request you MUST call all three tools in this exact order:
-1. transcribe_audio  — get the raw transcript from ElevenLabs
-2. correct_speech    — fix the transcript with Gemini
-3. synthesise_voice  — convert the corrected text to audio
-
-Never skip a step. Never change the order."""),
-    ("human", "{input}"),
-    MessagesPlaceholder(variable_name="agent_scratchpad"),
-])
+# ─── Pipeline ────────────────────────────────────────────────────────────────
+# LangChain 1.2+ removed AgentExecutor / create_tool_calling_agent from
+# `langchain.agents`. The original agent only ever ran these three tools in
+# fixed order, so we call them directly (same behaviour, fewer moving parts).
 
 
-def _build_executor() -> AgentExecutor:
-    agent = create_tool_calling_agent(key_manager.llm, tools, _prompt)
-    return AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        max_iterations=6,
-        return_intermediate_steps=True,
+def _normalize_tool_result(out) -> dict:
+    """Tools may return dict or JSON string depending on LangChain version."""
+    if isinstance(out, dict):
+        return out
+    if isinstance(out, str):
+        try:
+            return json.loads(out)
+        except json.JSONDecodeError:
+            return {"raw": out}
+    return {}
+
+
+def _run_pipeline_sync(audio_b64: str, condition: str, voice_id: str) -> dict:
+    import time
+    pipeline_start = time.time()
+    logger.info(f"Pipeline started: condition={condition}")
+    
+    t = _normalize_tool_result(
+        transcribe_audio.invoke({"audio_b64": audio_b64, "condition": condition})
+    )
+    raw = t.get("raw_transcript", "")
+
+    c = _normalize_tool_result(
+        correct_speech.invoke({"raw_transcript": raw, "condition": condition})
     )
 
+    corrected = c.get("corrected_text", "")
+    v = _normalize_tool_result(
+        synthesise_voice.invoke({"text": corrected, "voice_id": voice_id})
+    )
 
-_executor = _build_executor()
+    total_elapsed = time.time() - pipeline_start
+    logger.info(f"Pipeline completed in {total_elapsed:.3f}s")
+
+    return {
+        "raw_transcript": raw,
+        "corrected_text": corrected,
+        "confidence": float(c.get("confidence", 0.0) or 0.0),
+        "changes": c.get("changes", []) or [],
+        "audio_b64": v.get("audio_b64"),
+        "audio_format": v.get("format", "mp3"),
+        "gemini_key_used": key_manager.active_index + 1,
+    }
 
 
 # ─── Public entry point ───────────────────────────────────────────────────────
@@ -320,48 +397,15 @@ async def run_agent(
     """
     Called by FastAPI. Runs the full pipeline and returns a clean result dict.
     """
-    global _executor
-
-    payload = json.dumps({
-        "audio_b64": audio_b64,
-        "condition": condition,
-        "voice_id": voice_id,
-    })
-
     prev = key_manager.active_index
     try:
-        result = await _executor.ainvoke({"input": payload})
-    except Exception as exc:
+        return await asyncio.to_thread(
+            _run_pipeline_sync, audio_b64, condition, voice_id
+        )
+    except Exception:
         if key_manager.active_index != prev:
-            logger.warning("Key rotated mid-run — rebuilding executor and retrying")
-            _executor = _build_executor()
-            result = await _executor.ainvoke({"input": payload})
-        else:
-            raise
-
-    steps = result.get("intermediate_steps", [])
-
-    def _tool_out(name: str) -> dict:
-        hit = next((s[1] for s in steps if s[0].tool == name), None)
-        if isinstance(hit, dict):
-            return hit
-        if isinstance(hit, str):
-            try:
-                return json.loads(hit)
-            except Exception:
-                return {"raw": hit}
-        return {}
-
-    t = _tool_out("transcribe_audio")
-    c = _tool_out("correct_speech")
-    v = _tool_out("synthesise_voice")
-
-    return {
-        "raw_transcript":  t.get("raw_transcript", ""),
-        "corrected_text":  c.get("corrected_text", ""),
-        "confidence":      c.get("confidence", 0.0),
-        "changes":         c.get("changes", []),
-        "audio_b64":       v.get("audio_b64"),
-        "audio_format":    v.get("format", "mp3"),
-        "gemini_key_used": key_manager.active_index + 1,
-    }
+            logger.warning("Key rotated mid-run — retrying pipeline once")
+            return await asyncio.to_thread(
+                _run_pipeline_sync, audio_b64, condition, voice_id
+            )
+        raise
