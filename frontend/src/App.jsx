@@ -14,7 +14,7 @@ function App() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const base = import.meta.env.VITE_API_URL;
+        const base = import.meta.env.API_URL;
         if (!base) {
           setBackendStatus("unset");
           return;

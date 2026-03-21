@@ -9,6 +9,9 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# Convex lives at repo root (`../convex`). A stub `convex/_generated` may appear if the CLI was run from `frontend/` — safe to delete.
+/convex/
 dist-ssr
 *.local
 
