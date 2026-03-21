@@ -191,10 +191,14 @@ This starts **backend** (port **8001**), **frontend** (port **5173**), and **Con
 
 ## 6. Using the app
 
-1. Sign in (Clerk).
-2. Choose **Condition** (e.g. General, Dysarthria).
-3. **Record** → **Submit for correction**.
-4. Backend runs: ElevenLabs STT → Gemini correction → ElevenLabs TTS; the UI shows transcript, corrected text, and optional audio playback.
+1. Sign in via Clerk (Apple, Google, or email).
+2. **New users** are taken through an **onboarding flow**:
+   - Choose a **condition** (Dysarthria, Stuttering, Aphasia, or General). Each option has a hover/tap **?** info button with a clinical description.
+   - Read **10 practice phrases** aloud — each phrase must be recorded and submitted before you can proceed. Recordings go through the same `/process` pipeline and are saved to Convex (results are not shown during onboarding).
+   - On completion, the condition is saved to the user profile.
+3. **Returning users** skip onboarding and land on the main session view.
+4. **Record** → **Submit for correction** — backend runs: ElevenLabs STT → Gemini correction → ElevenLabs TTS; the UI shows transcript, corrected text, and optional audio playback.
+5. Past sessions are listed in the **left sidebar**; click any to review. **+ New session** resets the workspace.
 
 ---
 
@@ -231,10 +235,14 @@ This starts **backend** (port **8001**), **frontend** (port **5173**), and **Con
 
 ```
 SpeechBridge/
-├── package.json       # Root: convenience scripts that delegate to frontend
-├── backend/           # FastAPI + agent (Gemini + ElevenLabs)
+├── package.json              # Root: Convex CLI scripts (convex:dev, convex:deploy, …)
+├── convex/                   # Convex functions, schema, auth.config (run CLI from repo root)
+│   ├── schema.ts             # users (+ onboarding_completed), sessions, profile_versions
+│   ├── users.ts              # syncCurrentUser, completeOnboarding, getProfile, …
+│   └── sessions.ts           # save, listByUser, get, getForSummarisation
+├── backend/                  # FastAPI + agent (Gemini + ElevenLabs)
 │   ├── api/
-│   │   └── main.py    # Full app: /health, /process, …
+│   │   └── main.py           # /health, /process (multipart audio → correction → TTS)
 │   ├── agent.py
 │   └── .env.example
 ├── frontend/          # Vite + React + Clerk + Convex
