@@ -23,7 +23,12 @@ import os
 
 # Setup test logger - writes to same log file as agent for unified view
 # In serverless environments, use stdout only
-IS_SERVERLESS = os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+IS_SERVERLESS = (
+    os.environ.get('VERCEL_ENV') or
+    os.environ.get('VERCEL') or
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or
+    os.path.exists('/var/task')
+)
 log_file = None if IS_SERVERLESS else 'logs/agent.log'
 logger = setup_logger('test_dysarthria', log_file=log_file, level=logging.DEBUG)
 
