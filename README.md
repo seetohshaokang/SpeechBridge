@@ -23,6 +23,8 @@ On a **new machine**, install:
 | **Python** | **3.12+** (3.13 ok) |
 | **pip** | Usually bundled with Python |
 
+After clone, run **`npm install` twice**: once at the **repo root** (Convex CLI for `convex/`) and once in **`frontend/`** (Vite + React).
+
 Optional but useful:
 
 - **[uv](https://docs.astral.sh/uv/)** — faster Python env / installs (`uv sync` in `backend/` if you use it)
@@ -30,7 +32,7 @@ Optional but useful:
 Accounts / keys you will need:
 
 - [Clerk](https://dashboard.clerk.com) — app + publishable key; enable **Convex** integration; copy **Frontend API URL** (issuer).
-- [Convex](https://dashboard.convex.dev) — project linked from `npx convex dev` in `frontend/`.
+- [Convex](https://dashboard.convex.dev) — project linked from **`npm run convex:dev`** (or `npx convex dev`) at the **repo root** where `convex/` lives.
 - [Google AI Studio](https://aistudio.google.com) — Gemini API key(s) (this repo rotates across **three** keys).
 - [ElevenLabs](https://elevenlabs.io) — API key (Scribe + TTS).
 
@@ -88,10 +90,44 @@ curl http://localhost:8000/health
 
 ---
 
-## 3. Frontend setup
+## 3. Convex (repo root)
+
+Convex functions and schema live in **`convex/`** at the **SpeechBridge repo root** (not inside `frontend/`), so backend-oriented teammates can work on the same tree without touching the Vite app.
+
+From the repo root:
 
 ```bash
-cd ../frontend
+cd SpeechBridge    # repository root
+npm install        # Convex CLI + shared dependency (run once after clone)
+```
+
+**Convex + Clerk (first time)**
+
+1. From the **repo root**, run **`npm run convex:dev`** (same as `npx convex dev`) and log in; create or link a deployment. The CLI watches **`./convex/`** and syncs functions. Add **`CONVEX_URL=...`** (and optionally **`CONVEX_SITE_URL=...`**) to **`frontend/.env.local`** when prompted (Vite only reads env files under `frontend/`; see `frontend/vite.config.js` — use **`API_URL`**, **`CONVEX_*`**, **`CLERK_PUBLISHABLE_KEY`**, not `VITE_*`.)
+2. Set Convex to validate Clerk JWTs (from **repo root**):
+   ```bash
+   npx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-instance>.clerk.accounts.dev"
+   ```
+   Use the exact **Frontend API URL** from Clerk (Integrations → Convex).
+3. In Clerk, turn on the **Convex** integration and use the same app as the frontend.
+
+**Production / shared dev deployment** (from **repo root**):
+
+```bash
+npm run convex:deploy    # deploy functions to your linked Convex deployment
+npm run convex:dashboard # open Convex dashboard via CLI
+```
+
+Other common commands (repo root): `npx convex env list`, `npx convex env set …`, `npx convex logs`.
+
+**If you had `convex.json` under `frontend/` before:** move it to the **repo root** next to `package.json`, or run `npm run convex:dev` again from the root and re-link when prompted.
+
+---
+
+## 4. Frontend setup
+
+```bash
+cd frontend
 npm install
 ```
 
@@ -105,35 +141,25 @@ Edit **`frontend/.env.local`**:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_URL` | Yes (for full flow) | Backend base URL, e.g. `http://localhost:8000` |
-| `VITE_CONVEX_URL` | Yes (for Convex) | From Convex / `npx convex dev` (e.g. `VITE_CONVEX_URL=...`) |
-| `VITE_CONVEX_SITE_URL` | Often set by Convex CLI | Convex site URL if your tooling adds it |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Yes (for auth) | Clerk publishable key (`pk_...`) |
-
-**Convex + Clerk (first time)**
-
-1. In **`frontend/`** run `npx convex dev` and log in; create/link a deployment. This writes Convex URLs into `.env.local`.
-2. Set Convex to validate Clerk JWTs:
-   ```bash
-   npx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-instance>.clerk.accounts.dev"
-   ```
-   Use the exact **Frontend API URL** from Clerk (Integrations → Convex).
-3. In Clerk, turn on the **Convex** integration and use the same app as the frontend.
+| `API_URL` | Yes (for full flow) | Backend base URL, e.g. `http://localhost:8000` |
+| `CONVEX_URL` | Yes (for Convex) | Convex deployment URL (`.convex.cloud`), from dashboard / `npm run convex:dev` |
+| `CONVEX_SITE_URL` | Optional | Convex site URL (`.convex.site`); use if you rely on HTTP actions / site URL |
+| `CLERK_PUBLISHABLE_KEY` | Yes (for auth) | Clerk publishable key (`pk_...`) |
 
 ---
 
-## 4. Run everything locally
+## 5. Run everything locally
 
 You need **three** long-running processes for the full app (auth + Convex sync + API + UI):
 
 ### Terminal A — Convex
 
 ```bash
-cd frontend
-npx convex dev
+cd SpeechBridge    # repo root
+npm run convex:dev
 ```
 
-Leave it running (watches `convex/` and syncs functions).
+Leave it running (watches **`./convex/`** at the repo root and syncs functions).
 
 ### Terminal B — FastAPI
 
@@ -162,11 +188,11 @@ chmod +x deploy-local.sh
 ```
 
 This starts **backend** (port **8000**) and **frontend** (port **5173**).  
-You still run **`npx convex dev`** separately if you use Convex/Clerk.
+You still run **`npm run convex:dev`** from the **repo root** separately if you use Convex/Clerk.
 
 ---
 
-## 5. Using the app
+## 6. Using the app
 
 1. Sign in (Clerk).
 2. Choose **Condition** (e.g. General, Dysarthria).
@@ -175,7 +201,7 @@ You still run **`npx convex dev`** separately if you use Convex/Clerk.
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Issue | What to try |
 |--------|-------------|
@@ -185,13 +211,15 @@ You still run **`npx convex dev`** separately if you use Convex/Clerk.
 | Gemini `404` / model not found | Set `GEMINI_CHAT_MODEL` in `backend/.env` to a model your API key supports (see [AI Studio](https://aistudio.google.com)). |
 | `'list' object has no attribute 'strip'` | Fixed in current `agent.py` (normalizes Gemini message content). Pull latest. |
 | `ELEVENLABS_API_KEY` / `GEMINI_*` KeyError | Fill **`backend/.env`**; keys must be plain strings, not JSON arrays. |
-| Frontend can’t reach API | `VITE_API_URL=http://localhost:8000` in **`frontend/.env.local`**; restart `npm run dev`. |
+| Frontend can’t reach API | `API_URL=http://localhost:8000` in **`frontend/.env.local`**; restart `npm run dev`. |
 | CORS errors | Backend allows `http://localhost:5173` by default; add `FRONTEND_URL` if you use another origin. |
-| Convex auth errors | Set `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment; Clerk Convex integration enabled. |
+| Convex auth errors | Set `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment (`npx convex env set …` from **repo root**); Clerk Convex integration enabled. |
+| Convex CLI “can’t find convex folder” | Run Convex commands from **repo root** (`cd SpeechBridge`), not `frontend/`. |
+| **`frontend/convex/_generated` appeared** | The Convex CLI writes `convex/` relative to the shell’s cwd. Running `npx convex dev` **inside `frontend/`** creates a useless stub there. **Delete `frontend/convex`**, then only use **`npm run convex:dev`** from the **repo root**, or from `frontend/` run **`npm run convex:dev`** (it forwards to the root — see `frontend/package.json`). |
 
 ---
 
-## 7. Useful URLs (local)
+## 8. Useful URLs (local)
 
 | Service | URL |
 |---------|-----|
@@ -202,19 +230,20 @@ You still run **`npx convex dev`** separately if you use Convex/Clerk.
 
 ---
 
-## 8. Project layout (short)
+## 9. Project layout (short)
 
 ```
 SpeechBridge/
+├── package.json       # Root: Convex CLI scripts (convex:dev, convex:deploy, …)
+├── convex/            # Convex functions, schema, auth.config (run CLI from repo root)
 ├── backend/           # FastAPI + agent (Gemini + ElevenLabs)
 │   ├── api/
 │   │   └── main.py    # Full app: /health, /process, …
 │   ├── agent.py
 │   └── .env.example
-├── frontend/          # Vite + React + Convex + Clerk
-│   ├── convex/
+├── frontend/          # Vite + React + Clerk (imports generated types from ../convex)
 │   └── .env.example
-├── deploy-local.sh    # Backend + frontend only
+├── deploy-local.sh    # Backend + frontend only (not Convex)
 └── README.md
 ```
 

@@ -6,15 +6,15 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import "./index.css";
 import App from "./App.jsx";
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL;
-const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const convexUrl = import.meta.env.CONVEX_URL;
+const clerkPublishableKey = import.meta.env.CLERK_PUBLISHABLE_KEY;
 
 if (!convexUrl) {
-  throw new Error("Missing VITE_CONVEX_URL (run `npx convex dev` once).");
+  throw new Error("Missing CONVEX_URL (run `npm run convex:dev` at repo root once).");
 }
 if (!clerkPublishableKey) {
   throw new Error(
-    "Missing VITE_CLERK_PUBLISHABLE_KEY. Add it to .env.local (Clerk → API keys).",
+    "Missing CLERK_PUBLISHABLE_KEY. Add it to .env.local (Clerk → API keys).",
   );
 }
 

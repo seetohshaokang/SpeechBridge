@@ -1,3 +1,5 @@
+import { BrandLogo } from "./BrandLogo.jsx";
+
 /**
  * Public landing page — shown before sign-in.
  * Describes SpeechBridge features and funnels to auth.
@@ -11,7 +13,10 @@ export function LandingPage({
     <div className="landing">
       {/* ───── Nav ───── */}
       <nav className="landing-nav">
-        <span className="landing-logo">SpeechBridge</span>
+        <div className="landing-brand-lockup">
+          <BrandLogo variant="nav" />
+          <span className="landing-logo">SpeechBridge</span>
+        </div>
         <button className="btn btn--ghost" onClick={onGetStarted}>
           Sign in
         </button>
@@ -19,6 +24,9 @@ export function LandingPage({
 
       {/* ───── Hero ───── */}
       <section className="landing-hero">
+        <div className="landing-hero-logo">
+          <BrandLogo variant="hero" />
+        </div>
         <p className="landing-badge">AI-powered speech coaching</p>
         <h1 className="landing-headline">
           Speak clearly.
@@ -41,7 +49,7 @@ export function LandingPage({
             : backendStatus === "ok"
               ? "✓ Connected"
               : backendStatus === "unset"
-                ? "— set VITE_API_URL to check"
+                ? "— set API_URL to check"
                 : "✗ Disconnected"}
         </p>
       </section>

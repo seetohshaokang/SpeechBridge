@@ -1,0 +1,13 @@
+{
+  "name": "speechbridge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "convex:dashboard": "convex dashboard"
+  },
+  "dependencies": {
+    "convex": "^1.34.0"
+  }
+}
