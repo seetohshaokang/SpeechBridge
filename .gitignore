@@ -5,6 +5,7 @@ backend/*.pyc
 backend/.env
 backend/*.egg-info/
 backend/logs/*.log
+backend/data/
 
 # React
 frontend/node_modules/
