@@ -12,7 +12,13 @@ from langchain_core.tools import tool
 from util.logger import setup_logger
 
 load_dotenv()
-logger = setup_logger('agent', log_file='logs/agent.log', level=logging.DEBUG)
+
+# In serverless environments (Vercel, Lambda), use stdout logging only
+# File system is read-only except for /tmp, and logs are captured automatically
+IS_SERVERLESS = os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+log_file = None if IS_SERVERLESS else 'logs/agent.log'
+
+logger = setup_logger('agent', log_file=log_file, level=logging.DEBUG)
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
