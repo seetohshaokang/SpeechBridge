@@ -19,9 +19,13 @@ from agent import (
 
 from load_dysarthria import load_dysarthria_patient_samples
 from util.logger import setup_logger
+import os
 
 # Setup test logger - writes to same log file as agent for unified view
-logger = setup_logger('test_dysarthria', log_file='logs/agent.log', level=logging.DEBUG)
+# In serverless environments, use stdout only
+IS_SERVERLESS = os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+log_file = None if IS_SERVERLESS else 'logs/agent.log'
+logger = setup_logger('test_dysarthria', log_file=log_file, level=logging.DEBUG)
 
 # Fixtures
 
