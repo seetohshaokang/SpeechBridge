@@ -182,3 +182,102 @@
     border-right-color: var(--border);
   }
 }
+
+/* App shell */
+.app-main {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.app-main--narrow {
+  padding: 1.5rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.app-main--auth {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  min-height: 0;
+}
+
+/* Sign-in: single column, vertically centered, readable on dark theme */
+.sign-in-page {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.sign-in-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.75rem;
+}
+
+.sign-in-brand {
+  text-align: center;
+  padding: 0 0.25rem;
+}
+
+.sign-in-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.sign-in-title-main {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-h);
+}
+
+.sign-in-tagline {
+  margin: 0 auto;
+  max-width: 22rem;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.sign-in-card-wrap {
+  text-align: left;
+  width: 100%;
+}
+
+.sign-in-root {
+  width: 100% !important;
+  margin: 0 auto;
+}
+
+.sign-in-card {
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.08),
+    0 12px 40px rgb(0 0 0 / 0.12);
+}
+
+/* Hide Clerk’s generic “Sign in to My Application” block; we use `.sign-in-brand` */
+.sign-in-clerk-header--hidden {
+  display: none !important;
+}
+
+.sign-in-title {
+  font-size: 1.25rem !important;
+}
+
+.sign-in-subtitle {
+  font-size: 0.875rem !important;
+}
