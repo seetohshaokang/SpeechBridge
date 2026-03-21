@@ -3,6 +3,8 @@ import { useAudioRecorder } from "./hooks/useAudioRecorder.js";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8001";
 
+console.log("[SpeechSession] Initialized with API_URL:", API_URL);
+
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
@@ -89,17 +91,47 @@ export function SpeechSession({
     form.append("condition", userCondition);
     form.append("user_id", userId);
 
+    console.log("[SpeechSession] Submitting audio to backend:", {
+      apiUrl: API_URL,
+      endpoint: `${API_URL}/process`,
+      condition: userCondition,
+      userId: userId,
+      audioBlobSize: audioBlob.size,
+    });
+
     try {
       const resp = await fetch(`${API_URL}/process`, {
         method: "POST",
         body: form,
       });
+      
+      console.log("[SpeechSession] Received response:", {
+        status: resp.status,
+        statusText: resp.statusText,
+        ok: resp.ok,
+      });
+
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
+        console.error("[SpeechSession] Request failed:", {
+          status: resp.status,
+          body,
+        });
         throw new Error(body.detail ?? `Server returned ${resp.status}`);
       }
-      setResult(await resp.json());
+      
+      const result = await resp.json();
+      console.log("[SpeechSession] Success:", {
+        hasResult: !!result,
+        processingMs: result.processing_ms,
+        geminiKeyUsed: result.gemini_key_used,
+      });
+      setResult(result);
     } catch (err) {
+      console.error("[SpeechSession] Error:", {
+        message: err.message,
+        error: err,
+      });
       setError(err.message);
     } finally {
       setProcessing(false);

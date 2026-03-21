@@ -9,6 +9,8 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8001";
 
+console.log("[OnboardingFlow] Initialized with API_URL:", API_URL);
+
 function ConditionInfoButton({ label, description }) {
   return (
     <span className="onb-info">
@@ -75,19 +77,47 @@ function PhraseRecorder({ conditionId, userId, phraseKey, onSubmitted }) {
     form.append("condition", conditionId);
     form.append("user_id", userId);
 
+    console.log("[OnboardingFlow] Submitting audio to backend:", {
+      apiUrl: API_URL,
+      endpoint: `${API_URL}/process`,
+      condition: conditionId,
+      userId: userId,
+      audioBlobSize: audioBlob.size,
+    });
+
     try {
       const resp = await fetch(`${API_URL}/process`, {
         method: "POST",
         body: form,
       });
+
+      console.log("[OnboardingFlow] Received response:", {
+        status: resp.status,
+        statusText: resp.statusText,
+        ok: resp.ok,
+      });
+
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
+        console.error("[OnboardingFlow] Request failed:", {
+          status: resp.status,
+          body,
+        });
         throw new Error(body.detail ?? `Server returned ${resp.status}`);
       }
-      await resp.json();
+      
+      const result = await resp.json();
+      console.log("[OnboardingFlow] Success:", {
+        hasResult: !!result,
+        processingMs: result.processing_ms,
+      });
       setSubmitted(true);
       onSubmitted();
     } catch (e) {
+      console.error("[OnboardingFlow] Error:", {
+        message: e?.message,
+        error: e,
+      });
       setError(e?.message ?? "Something went wrong");
     } finally {
       setSubmitting(false);
