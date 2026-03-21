@@ -44,8 +44,8 @@ function App() {
         {showSignIn ? (
           <main className="app-main app-main--auth">
             <button
-              className="btn btn--ghost"
-              style={{ position: "absolute", top: "1.25rem", left: "1.25rem" }}
+              type="button"
+              className="btn btn--ghost sign-in-back"
               onClick={() => setShowSignIn(false)}
             >
               ← Back

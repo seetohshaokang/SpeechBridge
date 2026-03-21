@@ -1,3 +1,8 @@
+"""
+SpeechBridge — FastAPI backend entry point
+Run with: uvicorn api.main:app --reload --port 8001
+"""
+
 import base64
 import logging
 import time
@@ -138,6 +143,19 @@ class ProcessResponse(BaseModel):
     audio_format: str
     gemini_key_used: int
     processing_ms: int
+
+
+# ─── GET / ───────────────────────────────────────────────────────────────────
+
+@app.get("/")
+async def root():
+    """So opening the API root in a browser isn't a 404."""
+    return {
+        "service": "SpeechBridge",
+        "health": "/health",
+        "process": "POST /process",
+        "docs": "/docs",
+    }
 
 
 # ─── GET /health ──────────────────────────────────────────────────────────────

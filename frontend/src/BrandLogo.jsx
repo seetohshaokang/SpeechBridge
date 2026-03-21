@@ -9,7 +9,9 @@ export function BrandLogo({ variant = "md", className = "" }) {
         ? "brand-logo--nav"
         : variant === "hero"
           ? "brand-logo--hero"
-          : "brand-logo--md";
+          : variant === "signin"
+            ? "brand-logo--signin"
+            : "brand-logo--md";
 
   return (
     <img
