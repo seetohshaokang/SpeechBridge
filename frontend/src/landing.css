@@ -52,10 +52,12 @@
   color: var(--text-h);
 }
 
-/* Sign in stays visually balanced next to oversized wordmark */
+/* Sign in — larger tap target + type (nav ghost) */
 .landing-nav .btn--ghost {
-  font-size: clamp(1rem, 1.35vw, 1.15rem);
-  padding: 0.65em 1.35em;
+  font-size: clamp(1.2rem, 1.75vw, 1.45rem);
+  padding: 0.82em 1.65em;
+  border-radius: 0.75rem;
+  border-width: 2px;
 }
 
 .landing-hero-logo {
@@ -155,6 +157,18 @@
 .btn--lg {
   padding: 0.85rem 2rem;
   font-size: clamp(1.05rem, 1.3vw, 1.15rem);
+}
+
+/* Get started (hero + footer CTA) — bigger than default .btn--lg */
+.landing .btn.btn--primary.btn--lg {
+  padding: clamp(1rem, 2.2vw, 1.2rem) clamp(2.25rem, 5vw, 3rem);
+  font-size: clamp(1.2rem, 1.65vw, 1.4rem);
+  border-radius: 0.85rem;
+  box-shadow: 0 4px 14px rgba(170, 59, 255, 0.3);
+}
+
+.landing .btn.btn--primary.btn--lg:hover {
+  box-shadow: 0 6px 22px rgba(170, 59, 255, 0.4);
 }
 
 .btn--ghost {

@@ -60,7 +60,8 @@ export function SignInPage() {
               appearance={{
                 variables: {
                   ...variables,
-                  fontSize: "1.0625rem",
+                  /* Base UI text; was 1.25rem — +40% for readability */
+                  fontSize: "1.75rem",
                 },
               elements: {
                 rootBox: "sign-in-root",

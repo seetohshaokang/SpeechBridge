@@ -64,12 +64,22 @@ body {
   width: 100%;
   max-width: 100%;
   min-height: 100svh;
+  min-height: 100dvh;
   margin: 0;
   text-align: center;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow-x: clip;
+}
+
+/* Let the active route fill the viewport (authenticated shell, landing, etc.) */
+#root > .app-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 h1,

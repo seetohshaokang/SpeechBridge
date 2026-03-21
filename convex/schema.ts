@@ -16,6 +16,8 @@ export default defineSchema({
     updatedAt:       v.number(),
 
     // ── SpeechBridge personalisation fields (new) ─────────────────────────
+    /** Set false for new accounts until onboarding finishes; undefined = legacy (treated as done). */
+    onboarding_completed: v.optional(v.boolean()),
     condition:            v.optional(v.string()),
     pattern_summary:      v.optional(v.string()),   // injected into Gemini prompt
     keyterms:             v.optional(v.array(v.string())), // replaces default Scribe keyterms

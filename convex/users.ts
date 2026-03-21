@@ -71,8 +71,49 @@ export const syncCurrentUser = mutation({
       email,
       name,
       imageUrl: pictureUrl,
+      onboarding_completed: false,
       updatedAt: now,
     });
+  },
+});
+
+/**
+ * Called when the user finishes onboarding (condition chosen + practice phrases).
+ * Persists condition for /process and profile features.
+ */
+export const completeOnboarding = mutation({
+  args: {
+    condition: v.union(
+      v.literal("general"),
+      v.literal("dysarthria"),
+      v.literal("stuttering"),
+      v.literal("aphasia"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not signed in");
+    }
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+
+    if (!existing) {
+      throw new Error("User row missing — try signing in again");
+    }
+
+    await ctx.db.patch(existing._id, {
+      condition: args.condition,
+      onboarding_completed: true,
+      updatedAt: Date.now(),
+    });
+
+    return { status: "ok" as const };
   },
 });
 

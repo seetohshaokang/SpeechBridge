@@ -42,16 +42,6 @@ export function LandingPage({
             Get started — free
           </button>
         </div>
-        <p className="landing-backend-status" aria-live="polite">
-          Backend:{" "}
-          {backendLoading
-            ? "…"
-            : backendStatus === "ok"
-              ? "✓ Connected"
-              : backendStatus === "unset"
-                ? "— set VITE_API_URL to check"
-                : "✗ Disconnected"}
-        </p>
       </section>
 
       {/* ───── How it works ───── */}

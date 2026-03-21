@@ -1,12 +1,5 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useAudioRecorder } from "./hooks/useAudioRecorder.js";
-
-const CONDITIONS = [
-  { value: "general", label: "General" },
-  { value: "dysarthria", label: "Dysarthria" },
-  { value: "stuttering", label: "Stuttering" },
-  { value: "aphasia", label: "Aphasia" },
-];
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8001";
 
@@ -36,14 +29,42 @@ function RecordRipples({ audioLevel }) {
   );
 }
 
-export function SpeechSession({ userId = "anonymous" }) {
-  const { isRecording, seconds, audioLevel, start, stop } = useAudioRecorder();
-  const [condition, setCondition] = useState("general");
+export function SpeechSession({
+  userId = "anonymous",
+  /** From profile after onboarding — sent with /process (no in-session picker). */
+  userCondition = "general",
+  viewingSession = null,
+  /** Increment from parent when user chooses “New session” so local state resets even if already on the record view. */
+  sessionResetKey = 0,
+}) {
+  const { isRecording, seconds, audioLevel, start, stop, discard } =
+    useAudioRecorder();
   const [audioBlob, setAudioBlob] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const audioRef = useRef(null);
+
+  const isViewing = viewingSession !== null;
+
+  const previewUrl = useMemo(() => {
+    if (!audioBlob) return null;
+    return URL.createObjectURL(audioBlob);
+  }, [audioBlob]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    discard();
+    setAudioBlob(null);
+    setResult(null);
+    setError(null);
+    setProcessing(false);
+  }, [viewingSession, sessionResetKey, discard]);
 
   const handleRecord = useCallback(async () => {
     if (isRecording) {
@@ -65,7 +86,7 @@ export function SpeechSession({ userId = "anonymous" }) {
 
     const form = new FormData();
     form.append("audio", audioBlob, "recording.webm");
-    form.append("condition", condition);
+    form.append("condition", userCondition);
     form.append("user_id", userId);
 
     try {
@@ -83,7 +104,7 @@ export function SpeechSession({ userId = "anonymous" }) {
     } finally {
       setProcessing(false);
     }
-  }, [audioBlob, condition, userId]);
+  }, [audioBlob, userCondition, userId]);
 
   const playResult = useCallback(() => {
     if (!result?.audio_b64 || !audioRef.current) return;
@@ -136,30 +157,59 @@ export function SpeechSession({ userId = "anonymous" }) {
     };
   })();
 
-  return (
-    <section className="speech-session">
-      <h2 className="ss-heading">Record your speech</h2>
-      <p className="ss-sub">
-        Tap the logo, say something, then submit. The AI will transcribe, correct,
-        and read it back.
-      </p>
+  if (isViewing) {
+    const s = viewingSession;
+    return (
+      <section className="speech-session speech-session--viewing">
+        <div className="ss-history-banner">
+          <span className="ss-history-label">Past session</span>
+          <span className="ss-history-condition">{s.condition}</span>
+          <span className="ss-history-date">
+            {new Date(s.created_at).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        </div>
 
-      {/* Condition selector */}
-      <div className="ss-condition-row">
-        <label htmlFor="condition-select">Condition</label>
-        <select
-          id="condition-select"
-          className="ss-select"
-          value={condition}
-          onChange={(e) => setCondition(e.target.value)}
-          disabled={isRecording || processing}
-        >
-          {CONDITIONS.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <div className="ss-results">
+          <div className="ss-result-card">
+            <h3>What you said</h3>
+            <p className="ss-transcript">{s.raw_transcript || "—"}</p>
+          </div>
+
+          <div className="ss-result-card ss-result-card--corrected">
+            <h3>
+              Corrected{" "}
+              <span className="ss-confidence">
+                {Math.round((s.confidence ?? 0) * 100)}% confidence
+              </span>
+            </h3>
+            <p className="ss-transcript">{s.corrected_text || "—"}</p>
+            {s.changes?.length > 0 && (
+              <ul className="ss-changes">
+                {s.changes.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <p className="ss-meta">
+            Processed in {s.processing_ms}ms
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="speech-session speech-session--record">
+      <div className="ss-hero">
+        <h2 className="ss-hero-title">What would you like to practice?</h2>
+        <p className="ss-hero-sub">
+          Record your speech — we&apos;ll transcribe, correct, and read it back.
+        </p>
       </div>
 
       {/* Logo + outer disc + ripples */}
@@ -198,17 +248,26 @@ export function SpeechSession({ userId = "anonymous" }) {
         </span>
       </div>
 
-      {/* Preview + submit */}
-      {audioBlob && !isRecording && (
-        <div className="ss-actions">
-          <audio controls src={URL.createObjectURL(audioBlob)} className="ss-preview" />
-          <button
-            className="btn btn--primary"
-            onClick={handleSubmit}
-            disabled={processing}
-          >
-            {processing ? "Processing…" : "Submit for correction"}
-          </button>
+      {/* Preview + submit (condition comes from onboarding profile) */}
+      {audioBlob && !isRecording && previewUrl && (
+        <div className="ss-composer">
+          <div className="ss-composer-inner">
+            <div className="ss-composer-row ss-composer-row--actions">
+              <audio
+                controls
+                src={previewUrl}
+                className="ss-preview ss-composer-audio"
+              />
+              <button
+                type="button"
+                className="btn btn--primary ss-composer-submit"
+                onClick={handleSubmit}
+                disabled={processing}
+              >
+                {processing ? "Processing…" : "Submit for correction"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

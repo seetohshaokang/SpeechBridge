@@ -93,5 +93,20 @@ export function useAudioRecorder() {
     });
   }, []);
 
-  return { isRecording, seconds, audioLevel, analyserRef, start, stop };
+  /** Stop an in-progress recording without resolving a blob (e.g. “New session”). */
+  const discard = useCallback(() => {
+    resolveBlob.current = null;
+    clearInterval(timer.current);
+    timer.current = null;
+    cancelAnimationFrame(rafId.current);
+    rafId.current = null;
+    if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
+      mediaRecorder.current.stop();
+    }
+    setIsRecording(false);
+    setSeconds(0);
+    setAudioLevel(0);
+  }, []);
+
+  return { isRecording, seconds, audioLevel, analyserRef, start, stop, discard };
 }

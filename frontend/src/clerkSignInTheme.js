@@ -21,9 +21,9 @@ export const clerkSignInVariablesDark = {
   colorRing: "rgba(192, 132, 252, 0.45)",
   colorShadow: "rgba(0, 0, 0, 0.5)",
   colorModalBackdrop: "rgba(10, 10, 14, 0.65)",
-  borderRadius: "clamp(0.75rem, 1.5vw, 1.125rem)",
+  borderRadius: "clamp(1rem, 2vw, 1.35rem)",
   fontFamily: "system-ui, sans-serif",
-  spacing: "clamp(1rem, 1.2vw, 1.35rem)",
+  spacing: "clamp(1.75rem, 2.8vw, 2.45rem)",
 };
 
 export const clerkSignInVariablesLight = {
@@ -43,7 +43,7 @@ export const clerkSignInVariablesLight = {
   colorRing: "rgba(124, 58, 237, 0.35)",
   colorShadow: "rgba(15, 23, 42, 0.12)",
   colorModalBackdrop: "rgba(15, 23, 42, 0.35)",
-  borderRadius: "clamp(0.75rem, 1.5vw, 1.125rem)",
+  borderRadius: "clamp(1rem, 2vw, 1.35rem)",
   fontFamily: "system-ui, sans-serif",
-  spacing: "clamp(1rem, 1.2vw, 1.35rem)",
+  spacing: "clamp(1.75rem, 2.8vw, 2.45rem)",
 };

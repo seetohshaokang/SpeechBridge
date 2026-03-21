@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { AuthenticatedApp } from "./AuthenticatedApp.jsx";
 import { SignInPage } from "./SignInPage.jsx";
@@ -8,30 +8,6 @@ import "./landing.css";
 
 function App() {
   const [showSignIn, setShowSignIn] = useState(false);
-  const [backendStatus, setBackendStatus] = useState(null);
-  const [backendLoading, setBackendLoading] = useState(true);
-
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const base = import.meta.env.VITE_API_URL;
-        if (!base) {
-          setBackendStatus("unset");
-          return;
-        }
-        const response = await fetch(`${base}/health`);
-        const data = await response.json();
-        setBackendStatus(data.status);
-      } catch (error) {
-        setBackendStatus("error");
-        console.error("Backend connection failed:", error);
-      } finally {
-        setBackendLoading(false);
-      }
-    };
-    void checkBackend();
-  }, []);
-
   return (
     <>
       <AuthLoading>
@@ -54,21 +30,14 @@ function App() {
           </main>
         ) : (
           <main className="app-main">
-            <LandingPage
-              onGetStarted={() => setShowSignIn(true)}
-              backendLoading={backendLoading}
-              backendStatus={backendStatus}
-            />
+            <LandingPage onGetStarted={() => setShowSignIn(true)} />
           </main>
         )}
       </Unauthenticated>
 
       <Authenticated>
-        <main className="app-main app-main--narrow">
-          <AuthenticatedApp
-            backendLoading={backendLoading}
-            backendStatus={backendStatus}
-          />
+        <main className="app-main">
+          <AuthenticatedApp />
         </main>
       </Authenticated>
     </>
