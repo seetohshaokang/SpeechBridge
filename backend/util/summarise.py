@@ -11,17 +11,22 @@ Called from two places:
 import os
 import json
 import logging
+import sys
+
 import httpx
 from dotenv import load_dotenv
 
-import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from agent import key_manager, _message_content_to_str
+from util.convex_http import (
+    convex_auth_headers,
+    convex_deployment_url,
+    convex_request_body,
+    parse_convex_response,
+)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
-
-CONVEX_URL = os.environ.get("CONVEX_URL", "")
 
 # How many sessions to feed into each summarisation
 SESSIONS_PER_SUMMARY = 10
@@ -32,28 +37,35 @@ SUMMARISATION_CAP = 50
 
 # ─── Convex helpers (sync — summarisation runs in a thread via asyncio.to_thread)
 
-def _convex_query_sync(function: str, args: dict) -> dict:
-    if not CONVEX_URL:
-        return {}
+def _convex_query_sync(function: str, args: dict):
+    base = convex_deployment_url()
+    if not base:
+        return None
     resp = httpx.post(
-        f"{CONVEX_URL}/api/query",
-        json={"path": function, "args": args},
+        f"{base}/api/query",
+        headers=convex_auth_headers(),
+        json=convex_request_body(function, args),
         timeout=10,
     )
     resp.raise_for_status()
-    return resp.json().get("value") or {}
+    return parse_convex_response(resp.json())
 
 
 def _convex_mutation_sync(function: str, args: dict) -> dict:
-    if not CONVEX_URL:
+    base = convex_deployment_url()
+    if not base:
         return {}
     resp = httpx.post(
-        f"{CONVEX_URL}/api/mutation",
-        json={"path": function, "args": args},
+        f"{base}/api/mutation",
+        headers=convex_auth_headers(),
+        json=convex_request_body(function, args),
         timeout=10,
     )
     resp.raise_for_status()
-    return resp.json().get("value") or {}
+    value = parse_convex_response(resp.json())
+    if not isinstance(value, dict):
+        return {}
+    return value
 
 
 # ─── Summarisation prompt ─────────────────────────────────────────────────────
@@ -103,7 +115,7 @@ def run_summarisation(user_id: str, condition: str) -> bool:
         logger.error(f"Summarisation: failed to fetch profile — {exc}")
         return False
 
-    if not profile:
+    if not profile or not isinstance(profile, dict):
         logger.warning(f"Summarisation: no profile found for user={user_id} — skipping")
         return False
 

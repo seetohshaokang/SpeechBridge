@@ -8,7 +8,7 @@ const CONDITIONS = [
   { value: "aphasia", label: "Aphasia" },
 ];
 
-const API_URL = import.meta.env.API_URL ?? "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8001";
 
 function formatTime(s) {
   const m = Math.floor(s / 60);

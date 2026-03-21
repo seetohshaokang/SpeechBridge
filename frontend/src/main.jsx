@@ -9,14 +9,14 @@ import App from "./App.jsx";
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-console.log("All env vars:", import.meta.env);
-
 if (!convexUrl) {
-  throw new Error("Missing CONVEX_URL (run `npm run convex:dev` at repo root once).");
+  throw new Error(
+    "Missing VITE_CONVEX_URL in frontend/.env.local (run `npm run convex:dev` at repo root once).",
+  );
 }
 if (!clerkPublishableKey) {
   throw new Error(
-    "Missing CLERK_PUBLISHABLE_KEY. Add it to .env.local (Clerk → API keys).",
+    "Missing VITE_CLERK_PUBLISHABLE_KEY in frontend/.env.local (Clerk → API keys).",
   );
 }
 

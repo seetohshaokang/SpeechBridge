@@ -2,10 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-// Client-safe env vars use stable names (no VITE_ prefix). Only keys matching
-// these prefixes are exposed to import.meta.env — not the whole process env.
+// Only VITE_* keys are exposed to import.meta.env (Vite default).
+// Never prefix secrets with VITE_ — e.g. keep CLERK_SECRET_KEY out of the client bundle.
 export default defineConfig({
   plugins: [react()],
-  // CLERK_PUBLISHABLE_* only — avoids exposing CLERK_SECRET_KEY from .env to the client
-  envPrefix: ['CONVEX_', 'API_', 'CLERK_PUBLISHABLE_'],
+  envPrefix: 'VITE_',
 })

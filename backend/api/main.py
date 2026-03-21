@@ -2,7 +2,7 @@ import base64
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import Literal
+from typing import Any, Literal
 
 import asyncio
 
@@ -17,7 +17,12 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agent import run_agent, DEFAULT_VOICE_ID
-from util.summarise import run_summarisation
+from util.convex_http import (
+    convex_auth_headers,
+    convex_deployment_url,
+    convex_request_body,
+    parse_convex_response,
+)
 from util.summarise import run_summarisation
 
 load_dotenv()
@@ -28,39 +33,58 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CONVEX_URL = os.environ.get("CONVEX_URL", "")
 
+def _base_mime_type(content_type: str | None) -> str | None:
+    """Strip MIME parameters — browsers send e.g. audio/webm;codecs=opus."""
+    if not content_type:
+        return None
+    return content_type.split(";", 1)[0].strip().lower()
 
 # ─── Convex helpers ───────────────────────────────────────────────────────────
 # httpx is still needed here to talk to Convex's HTTP API.
 # (ElevenLabs + Gemini use their own SDKs in agent.py)
+# CONVEX_URL must be set in backend/.env (same URL as frontend VITE_CONVEX_URL).
 
-async def convex_query(function: str, args: dict) -> dict:
-    """Call a Convex query. Safe to call even if CONVEX_URL is not set."""
-    if not CONVEX_URL:
-        return {}
+async def convex_query(function: str, args: dict) -> Any:
+    """Call a Convex query. Returns None if CONVEX_URL is unset; else the decoded value (dict, bool, …)."""
+    base = convex_deployment_url()
+    if not base:
+        return None
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{CONVEX_URL}/api/query",
-            json={"path": function, "args": args},
+            f"{base}/api/query",
+            headers=convex_auth_headers(),
+            json=convex_request_body(function, args),
             timeout=10,
         )
         resp.raise_for_status()
-        return resp.json().get("value") or {}
+        return parse_convex_response(resp.json())
 
 
 async def convex_mutation(function: str, args: dict) -> dict:
-    """Fire a Convex mutation. Safe to call even if CONVEX_URL is not set."""
-    if not CONVEX_URL:
+    """Fire a Convex mutation. Returns {} if CONVEX_URL is unset or response has no object value."""
+    base = convex_deployment_url()
+    if not base:
+        logger.warning(
+            "CONVEX_URL is not set in backend/.env — skipping Convex mutation %r (sessions will not persist)",
+            function,
+        )
         return {}
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{CONVEX_URL}/api/mutation",
-            json={"path": function, "args": args},
+            f"{base}/api/mutation",
+            headers=convex_auth_headers(),
+            json=convex_request_body(function, args),
             timeout=10,
         )
         resp.raise_for_status()
-        return resp.json().get("value") or {}
+        value = parse_convex_response(resp.json())
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            logger.warning("Convex mutation %r returned non-dict %s", function, type(value))
+            return {}
+        return value
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
@@ -68,6 +92,11 @@ async def convex_mutation(function: str, args: dict) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("SpeechBridge backend starting up...")
+    if not convex_deployment_url():
+        logger.warning(
+            "CONVEX_URL is missing in backend/.env — set it to the same URL as "
+            "frontend VITE_CONVEX_URL (e.g. https://….convex.cloud) so /process can save sessions."
+        )
     yield
     logger.info("SpeechBridge backend shutting down.")
 
@@ -146,7 +175,8 @@ async def process_audio(
         "audio/mp3", "audio/ogg", "audio/mp4",
         "application/octet-stream",  # Chrome sometimes sends this for webm
     }
-    if audio.content_type and audio.content_type not in allowed_types:
+    base_type = _base_mime_type(audio.content_type)
+    if base_type and base_type not in allowed_types:
         raise HTTPException(
             status_code=415,
             detail=f"Unsupported audio type '{audio.content_type}'. Send webm, wav, or mp3.",
@@ -171,7 +201,7 @@ async def process_audio(
     if user_id != "anonymous":
         try:
             profile = await convex_query("users:getProfile", {"user_id": user_id})
-            if profile:
+            if profile and isinstance(profile, dict):
                 pattern_summary   = profile.get("pattern_summary")
                 keyterms_override = profile.get("keyterms")
                 if pattern_summary:
