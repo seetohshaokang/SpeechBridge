@@ -1,29 +1,32 @@
-"""
-SpeechBridge — FastAPI backend entry point
-Run with: uvicorn api.main:app --reload --port 8000
-"""
-
-import os
 import base64
 import logging
 import time
 from contextlib import asynccontextmanager
 from typing import Literal
 
+import asyncio
+
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from agent import run_agent, DEFAULT_VOICE_ID
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from util.logger import setup_logger
+from agent import run_agent, DEFAULT_VOICE_ID
+from util.summarise import run_summarisation
+from util.summarise import run_summarisation
 
 load_dotenv()
 
-logger = setup_logger('api', log_file='logs/api.log', level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 CONVEX_URL = os.environ.get("CONVEX_URL", "")
 
@@ -31,6 +34,20 @@ CONVEX_URL = os.environ.get("CONVEX_URL", "")
 # ─── Convex helpers ───────────────────────────────────────────────────────────
 # httpx is still needed here to talk to Convex's HTTP API.
 # (ElevenLabs + Gemini use their own SDKs in agent.py)
+
+async def convex_query(function: str, args: dict) -> dict:
+    """Call a Convex query. Safe to call even if CONVEX_URL is not set."""
+    if not CONVEX_URL:
+        return {}
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={"path": function, "args": args},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return resp.json().get("value") or {}
+
 
 async def convex_mutation(function: str, args: dict) -> dict:
     """Fire a Convex mutation. Safe to call even if CONVEX_URL is not set."""
@@ -43,7 +60,7 @@ async def convex_mutation(function: str, args: dict) -> dict:
             timeout=10,
         )
         resp.raise_for_status()
-        return resp.json().get("value", {})
+        return resp.json().get("value") or {}
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
@@ -94,19 +111,6 @@ class ProcessResponse(BaseModel):
     processing_ms: int
 
 
-# ─── GET / ───────────────────────────────────────────────────────────────────
-
-@app.get("/")
-async def root():
-    """So opening http://localhost:8000/ in a browser isn't a 404."""
-    return {
-        "service": "SpeechBridge",
-        "health": "/health",
-        "process": "POST /process",
-        "docs": "/docs",
-    }
-
-
 # ─── GET /health ──────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -119,6 +123,7 @@ async def health():
 
 @app.post("/process", response_model=ProcessResponse)
 async def process_audio(
+    background_tasks: BackgroundTasks,
     audio: UploadFile = File(..., description="Audio file — webm, wav, or mp3"),
     condition: ConditionType = Form(default="general"),
     user_id: str = Form(default="anonymous"),
@@ -136,23 +141,12 @@ async def process_audio(
     t_start = time.monotonic()
 
     # ── Validate ──────────────────────────────────────────────────────────────
-    # Browsers send e.g. "audio/webm;codecs=opus" — compare base type only.
-    def _base_mime(ct: str | None) -> str | None:
-        if not ct:
-            return None
-        return ct.split(";", 1)[0].strip().lower()
-
     allowed_types = {
-        "audio/webm",
-        "audio/wav",
-        "audio/mpeg",
-        "audio/mp3",
-        "audio/ogg",
-        "audio/mp4",
-        "application/octet-stream",  # some clients for webm
+        "audio/webm", "audio/wav", "audio/mpeg",
+        "audio/mp3", "audio/ogg", "audio/mp4",
+        "application/octet-stream",  # Chrome sometimes sends this for webm
     }
-    base = _base_mime(audio.content_type)
-    if base and base not in allowed_types:
+    if audio.content_type and audio.content_type not in allowed_types:
         raise HTTPException(
             status_code=415,
             detail=f"Unsupported audio type '{audio.content_type}'. Send webm, wav, or mp3.",
@@ -171,12 +165,28 @@ async def process_audio(
         f"size={len(audio_bytes) / 1024:.1f} KB"
     )
 
+    # ── Fetch user profile for personalisation ───────────────────────────────
+    pattern_summary    = None
+    keyterms_override  = None
+    if user_id != "anonymous":
+        try:
+            profile = await convex_query("users:getProfile", {"user_id": user_id})
+            if profile:
+                pattern_summary   = profile.get("pattern_summary")
+                keyterms_override = profile.get("keyterms")
+                if pattern_summary:
+                    logger.info(f"Profile loaded for user={user_id} — personalisation active")
+        except Exception as exc:
+            logger.warning(f"Profile fetch failed ({exc}) — using defaults")
+
     # ── Run the agent ─────────────────────────────────────────────────────────
     try:
         result = await run_agent(
             audio_b64=audio_b64,
             condition=condition,
             voice_id=DEFAULT_VOICE_ID,
+            pattern_summary=pattern_summary,
+            keyterms_override=keyterms_override,
         )
     except Exception as exc:
         logger.error(f"Agent error: {exc}", exc_info=True)
@@ -210,6 +220,24 @@ async def process_audio(
         session_id = saved.get("session_id", session_id)
     except Exception as exc:
         logger.warning(f"Convex save failed ({exc}) — returning result anyway.")
+
+    # ── Trigger summarisation in background if threshold is met ───────────────
+    if user_id != "anonymous":
+        try:
+            should = await convex_query(
+                "users:shouldSummarise",
+                {"user_id": user_id, "confidence": result["confidence"]},
+            )
+            if should:
+                logger.info(f"Scheduling summarisation for user={user_id}")
+                background_tasks.add_task(
+                    asyncio.to_thread,
+                    run_summarisation,
+                    user_id,
+                    condition,
+                )
+        except Exception as exc:
+            logger.warning(f"shouldSummarise check failed ({exc}) — skipping")
 
     return ProcessResponse(
         session_id=session_id,

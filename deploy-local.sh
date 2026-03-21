@@ -20,12 +20,17 @@ echo "⚛️  Starting Frontend (port 5173)..."
 cd frontend && npm run dev &
 FRONTEND_PID=$!
 
+echo "🗄️  Starting Convex..."
+npx convex dev &
+CONVEX_PID=$!
+ 
 echo ""
 echo "✅ Services running:"
 echo "   Backend:  http://localhost:8000"
 echo "   Frontend: http://localhost:5173"
+echo "   Convex:   https://dashboard.convex.dev"
 echo ""
-echo "Press Ctrl+C to stop both services"
+echo "Press Ctrl+C to stop all services"
 echo ""
-
+ 
 wait

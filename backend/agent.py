@@ -165,7 +165,7 @@ _KEYTERMS: dict[str, list[str]] = {
 # ─── Tool 1: Transcribe — ElevenLabs Scribe v2 ───────────────────────────────
 
 @tool
-def transcribe_audio(audio_b64: str, condition: str) -> dict:
+def transcribe_audio(audio_b64: str, condition: str, keyterms_override: list | None = None) -> dict:
     """
     Transcribes speech audio using ElevenLabs Scribe v2.
     Always call this first. Returns the raw transcript.
@@ -181,7 +181,11 @@ def transcribe_audio(audio_b64: str, condition: str) -> dict:
     logger.debug(f"Transcribing {len(audio_bytes)} bytes [{condition}]")
 
     # Pick the keyterm list for this condition (fall back to general)
-    keyterms = _KEYTERMS.get(condition, _KEYTERMS["general"])
+    if keyterms_override:
+        keyterms = keyterms_override[:100]  # Scribe v2 hard limit
+        logger.debug(f"Using personalised keyterms ({len(keyterms)})")
+    else:
+        keyterms = _KEYTERMS.get(condition, _KEYTERMS["general"])
 
     # ElevenLabs SDK — speech_to_text.convert()
     import io
@@ -208,7 +212,7 @@ def transcribe_audio(audio_b64: str, condition: str) -> dict:
 # ─── Tool 2: Correct — Gemini reasoning ──────────────────────────────────────
 
 @tool
-def correct_speech(raw_transcript: str, condition: str) -> dict:
+def correct_speech(raw_transcript: str, condition: str, pattern_summary: str | None = None) -> dict:
     """
     Takes the raw transcript and reconstructs the most likely intended sentence.
     Uses Gemini to reason about the intended meaning.
@@ -246,10 +250,19 @@ def correct_speech(raw_transcript: str, condition: str) -> dict:
 
     hint = condition_hints.get(condition, condition_hints["general"])
 
+    personalisation_block = ""
+    if pattern_summary and pattern_summary.strip():
+        personalisation_block = f"""
+    User-specific speech pattern (learned from their history):
+    {pattern_summary.strip()}
+    """
+        logger.debug("Injecting personalised pattern summary into correction prompt")
+
     prompt = f"""You are a speech correction specialist helping people with speech disabilities communicate clearly.
 
 Condition: {condition}
 Context: {hint}
+{personalisation_block}
 
 Raw transcript (what the speech recognition heard):
 "{raw_transcript}"
@@ -354,18 +367,36 @@ def _normalize_tool_result(out) -> dict:
     return {}
 
 
-def _run_pipeline_sync(audio_b64: str, condition: str, voice_id: str) -> dict:
+def _run_pipeline_sync(
+    audio_b64: str,
+    condition: str,
+    voice_id: str,
+    pattern_summary: str | None = None,
+    keyterms_override: list | None = None,
+) -> dict:
     import time
     pipeline_start = time.time()
-    logger.info(f"Pipeline started: condition={condition}")
+    logger.info(
+        f"Pipeline started: condition={condition}  "
+        f"personalised={'yes' if pattern_summary else 'no'}"
+    )
     
     t = _normalize_tool_result(
-        transcribe_audio.invoke({"audio_b64": audio_b64, "condition": condition})
+        transcribe_audio.invoke({
+            "audio_b64":         audio_b64,
+            "condition":         condition,
+            "keyterms_override": keyterms_override,
+        })
     )
+
     raw = t.get("raw_transcript", "")
 
     c = _normalize_tool_result(
-        correct_speech.invoke({"raw_transcript": raw, "condition": condition})
+        correct_speech.invoke({
+            "raw_transcript":  raw,
+            "condition":       condition,
+            "pattern_summary": pattern_summary,
+        })
     )
 
     corrected = c.get("corrected_text", "")
@@ -393,6 +424,8 @@ async def run_agent(
     audio_b64: str,
     condition: str,
     voice_id: str = DEFAULT_VOICE_ID,
+    pattern_summary: str | None = None,
+    keyterms_override: list | None = None,
 ) -> dict:
     """
     Called by FastAPI. Runs the full pipeline and returns a clean result dict.
@@ -400,7 +433,12 @@ async def run_agent(
     prev = key_manager.active_index
     try:
         return await asyncio.to_thread(
-            _run_pipeline_sync, audio_b64, condition, voice_id
+            _run_pipeline_sync,
+            audio_b64,
+            condition,
+            voice_id,
+            pattern_summary,
+            keyterms_override,
         )
     except Exception:
         if key_manager.active_index != prev:
