@@ -4,6 +4,7 @@ backend/__pycache__/
 backend/*.pyc
 backend/.env
 backend/*.egg-info/
+backend/logs/*.log
 
 # React
 frontend/node_modules/

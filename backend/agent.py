@@ -9,8 +9,10 @@ from elevenlabs.client import ElevenLabs
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 
+from util.logger import setup_logger
+
 load_dotenv()
-logger = logging.getLogger(__name__)
+logger = setup_logger('agent', log_file='logs/agent.log', level=logging.DEBUG)
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
@@ -172,7 +174,11 @@ def transcribe_audio(audio_b64: str, condition: str) -> dict:
         audio_b64: Base64-encoded audio (webm/wav/mp3).
         condition: One of 'dysarthria', 'stuttering', 'aphasia', 'general'.
     """
+    import time
+    t_start = time.time()
+    
     audio_bytes = base64.b64decode(audio_b64)
+    logger.debug(f"Transcribing {len(audio_bytes)} bytes [{condition}]")
 
     # Pick the keyterm list for this condition (fall back to general)
     keyterms = _KEYTERMS.get(condition, _KEYTERMS["general"])
@@ -191,9 +197,10 @@ def transcribe_audio(audio_b64: str, condition: str) -> dict:
     )
 
     transcript = (result.text or "").strip()
+    elapsed = time.time() - t_start
     logger.info(
-        f"Scribe [{condition}] transcript: '{transcript[:100]}'"
-        f"  keyterms_used={len(keyterms)}"
+        f"Scribe [{condition}] transcript: '{transcript[:100]}' "
+        f"keyterms={len(keyterms)} elapsed={elapsed:.3f}s"
     )
     return {"raw_transcript": transcript}
 
@@ -211,6 +218,10 @@ def correct_speech(raw_transcript: str, condition: str) -> dict:
         raw_transcript: The raw text output from transcribe_audio.
         condition: Speech condition — helps Gemini apply the right corrections.
     """
+    import time
+    t_start = time.time()
+    logger.debug(f"Starting correction [{condition}]: '{raw_transcript[:80]}'")
+    
     condition_hints = {
         "dysarthria": (
             "Dysarthria causes slurred, slow, or mumbled speech. "
@@ -269,13 +280,15 @@ Respond ONLY with valid JSON in this exact format:
 
     try:
         parsed = json.loads(raw)
+        elapsed = time.time() - t_start
         logger.info(
             f"Correction: '{parsed.get('corrected_text', '')[:80]}' "
-            f"confidence={parsed.get('confidence', 0)}"
+            f"confidence={parsed.get('confidence', 0)} elapsed={elapsed:.3f}s"
         )
         return parsed
     except json.JSONDecodeError:
-        logger.warning(f"Gemini returned non-JSON: {raw[:200]}")
+        elapsed = time.time() - t_start
+        logger.warning(f"Gemini returned non-JSON: {raw[:200]} elapsed={elapsed:.3f}s")
         return {
             "corrected_text": raw_transcript,
             "confidence": 0.4,
@@ -295,6 +308,10 @@ def synthesise_voice(text: str, voice_id: str = DEFAULT_VOICE_ID) -> dict:
         text: The corrected sentence to speak.
         voice_id: ElevenLabs voice ID.
     """
+    import time
+    t_start = time.time()
+    logger.debug(f"Synthesising: '{text[:80]}'")
+    
     # ElevenLabs SDK — text_to_speech.convert()
     # Returns a generator of audio chunks — join them into bytes
     audio_chunks = eleven.text_to_speech.convert(
@@ -310,6 +327,9 @@ def synthesise_voice(text: str, voice_id: str = DEFAULT_VOICE_ID) -> dict:
     )
 
     audio_bytes = b"".join(audio_chunks)
+    elapsed = time.time() - t_start
+    logger.info(f"TTS generated {len(audio_bytes)} bytes in {elapsed:.3f}s")
+    
     return {
         "audio_b64": base64.b64encode(audio_bytes).decode(),
         "format": "mp3",
@@ -335,6 +355,10 @@ def _normalize_tool_result(out) -> dict:
 
 
 def _run_pipeline_sync(audio_b64: str, condition: str, voice_id: str) -> dict:
+    import time
+    pipeline_start = time.time()
+    logger.info(f"Pipeline started: condition={condition}")
+    
     t = _normalize_tool_result(
         transcribe_audio.invoke({"audio_b64": audio_b64, "condition": condition})
     )
@@ -348,6 +372,9 @@ def _run_pipeline_sync(audio_b64: str, condition: str, voice_id: str) -> dict:
     v = _normalize_tool_result(
         synthesise_voice.invoke({"text": corrected, "voice_id": voice_id})
     )
+
+    total_elapsed = time.time() - pipeline_start
+    logger.info(f"Pipeline completed in {total_elapsed:.3f}s")
 
     return {
         "raw_transcript": raw,

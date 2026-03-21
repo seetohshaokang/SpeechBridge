@@ -7,7 +7,7 @@ Helping people with speech disabilities communicate more clearly — record spee
 | Layer | Tech |
 |--------|------|
 | **Frontend** | React (Vite), Clerk (auth), Convex (user data / optional sessions) |
-| **Backend** | FastAPI (`main:app`) — `POST /process` (multipart audio → transcript → Gemini correction → ElevenLabs TTS) |
+| **Backend** | FastAPI (`api.main:app`) — `POST /process` (multipart audio → transcript → Gemini correction → ElevenLabs TTS) |
 | **AI / voice** | Google Gemini (text correction), ElevenLabs (Scribe STT + TTS) |
 
 ---
@@ -166,11 +166,8 @@ Leave it running (watches **`./convex/`** at the repo root and syncs functions).
 ```bash
 cd backend
 source .venv/bin/activate
-uvicorn main:app --reload --port 8000
+uvicorn api.main:app --reload --port 8000
 ```
-
-Use **`main:app`** (full API including `POST /process`).  
-`api.main:app` is a minimal entry for serverless and does **not** include the speech pipeline.
 
 ### Terminal C — Vite
 
@@ -240,9 +237,9 @@ SpeechBridge/
 ├── package.json       # Root: Convex CLI scripts (convex:dev, convex:deploy, …)
 ├── convex/            # Convex functions, schema, auth.config (run CLI from repo root)
 ├── backend/           # FastAPI + agent (Gemini + ElevenLabs)
-│   ├── main.py        # Full app: /health, /process, …
+│   ├── api/
+│   │   └── main.py    # Full app: /health, /process, …
 │   ├── agent.py
-│   ├── api/main.py    # Slim app for serverless demos
 │   └── .env.example
 ├── frontend/          # Vite + React + Clerk (imports generated types from ../convex)
 │   └── .env.example
