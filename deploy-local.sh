@@ -7,12 +7,12 @@ echo ""
 
 trap 'echo ""; echo "🛑 Shutting down..."; kill 0; exit 0' INT TERM
 
-echo "📦 Starting Backend (port 8000)..."
+echo "📦 Starting Backend (port 8001)..."
 # Prefer project venv (run once: cd backend && python3 -m venv .venv && .venv/bin/pip install -e .)
 if [ -x backend/.venv/bin/uvicorn ]; then
-  (cd backend && .venv/bin/uvicorn api.main:app --reload --port 8000) &
+  (cd backend && .venv/bin/uvicorn api.main:app --reload --port 8001) &
 else
-  (cd backend && uvicorn api.main:app --reload --port 8000) &
+  (cd backend && uvicorn api.main:app --reload --port 8001) &
 fi
 BACKEND_PID=$!
 
@@ -22,7 +22,7 @@ FRONTEND_PID=$!
 
 echo ""
 echo "✅ Services running:"
-echo "   Backend:  http://localhost:8000"
+echo "   Backend:  http://localhost:8001"
 echo "   Frontend: http://localhost:5173"
 echo ""
 echo "Press Ctrl+C to stop both services"

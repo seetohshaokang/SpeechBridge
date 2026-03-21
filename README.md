@@ -85,7 +85,7 @@ Edit **`backend/.env`** and set:
 **Quick health check** (after the server is running — see below):
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 ---
@@ -141,7 +141,7 @@ Edit **`frontend/.env.local`**:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `API_URL` | Yes (for full flow) | Backend base URL, e.g. `http://localhost:8000` |
+| `API_URL` | Yes (for full flow) | Backend base URL, e.g. `http://localhost:8001` |
 | `CONVEX_URL` | Yes (for Convex) | Convex deployment URL (`.convex.cloud`), from dashboard / `npm run convex:dev` |
 | `CONVEX_SITE_URL` | Optional | Convex site URL (`.convex.site`); use if you rely on HTTP actions / site URL |
 | `CLERK_PUBLISHABLE_KEY` | Yes (for auth) | Clerk publishable key (`pk_...`) |
@@ -166,7 +166,7 @@ Leave it running (watches **`./convex/`** at the repo root and syncs functions).
 ```bash
 cd backend
 source .venv/bin/activate
-uvicorn api.main:app --reload --port 8000
+uvicorn api.main:app --reload --port 8001
 ```
 
 ### Terminal C — Vite
@@ -187,7 +187,7 @@ chmod +x deploy-local.sh
 ./deploy-local.sh
 ```
 
-This starts **backend** (port **8000**) and **frontend** (port **5173**).  
+This starts **backend** (port **8001**) and **frontend** (port **5173**).  
 You still run **`npm run convex:dev`** from the **repo root** separately if you use Convex/Clerk.
 
 ---
@@ -211,7 +211,7 @@ You still run **`npm run convex:dev`** from the **repo root** separately if you 
 | Gemini `404` / model not found | Set `GEMINI_CHAT_MODEL` in `backend/.env` to a model your API key supports (see [AI Studio](https://aistudio.google.com)). |
 | `'list' object has no attribute 'strip'` | Fixed in current `agent.py` (normalizes Gemini message content). Pull latest. |
 | `ELEVENLABS_API_KEY` / `GEMINI_*` KeyError | Fill **`backend/.env`**; keys must be plain strings, not JSON arrays. |
-| Frontend can’t reach API | `API_URL=http://localhost:8000` in **`frontend/.env.local`**; restart `npm run dev`. |
+| Frontend can’t reach API | `API_URL=http://localhost:8001` in **`frontend/.env.local`**; restart `npm run dev`. |
 | CORS errors | Backend allows `http://localhost:5173` by default; add `FRONTEND_URL` if you use another origin. |
 | Convex auth errors | Set `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment (`npx convex env set …` from **repo root**); Clerk Convex integration enabled. |
 | Convex CLI “can’t find convex folder” | Run Convex commands from **repo root** (`cd SpeechBridge`), not `frontend/`. |
@@ -224,9 +224,9 @@ You still run **`npm run convex:dev`** from the **repo root** separately if you 
 | Service | URL |
 |---------|-----|
 | Frontend | http://localhost:5173 |
-| API root | http://localhost:8000/ |
-| Health | http://localhost:8000/health |
-| OpenAPI docs | http://localhost:8000/docs |
+| API root | http://localhost:8001/ |
+| Health | http://localhost:8001/health |
+| OpenAPI docs | http://localhost:8001/docs |
 
 ---
 

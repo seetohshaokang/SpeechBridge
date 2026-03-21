@@ -187,6 +187,10 @@
 .app-main {
   box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* Landing (full-width) fills the viewport row */
+  align-self: stretch;
 }
 
 .app-main--narrow {
@@ -196,38 +200,117 @@
 }
 
 .app-main--auth {
+  position: relative;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/* Back — scales with viewport (was tiny fixed inset) */
+.sign-in-back {
+  position: absolute;
+  z-index: 20;
+  top: clamp(1rem, 2.5vw, 2rem);
+  left: clamp(1rem, 2.5vw, 2rem);
+  font-size: clamp(0.95rem, 1.25vw + 0.5rem, 1.15rem);
+  padding: 0.55em 1.15em;
+}
+
+/* Fills the auth main row — no skinny centered column */
+.sign-in-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: min(100svh, 100vh);
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Two-panel layout: 60% welcome / brand, 40% Clerk login (fixed ratio) */
+.sign-in-split {
+  flex: 1;
+  display: grid;
+  width: 100%;
+  min-height: min(100svh, 100vh);
+  min-width: 0;
+  box-sizing: border-box;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0;
+}
+
+.sign-in-split__brand {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: clamp(1.25rem, 4vw, 2.5rem);
-  min-height: 0;
-}
-
-/* Sign-in: single column, vertically centered, readable on dark theme */
-.sign-in-page {
-  width: 100%;
-  max-width: 28rem;
-  margin: 0 auto;
   text-align: center;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
+  box-sizing: border-box;
+  border-right: 1px solid var(--border);
+  background:
+    radial-gradient(
+      ellipse 85% 55% at 50% 12%,
+      rgba(192, 132, 252, 0.14),
+      transparent 55%
+    ),
+    var(--bg);
 }
 
-.sign-in-shell {
+.sign-in-split__form {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 1.75rem;
+  justify-content: center;
+  padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.75rem);
+  box-sizing: border-box;
+  min-width: 0;
+  background: var(--bg);
+}
+
+@media (max-width: 900px) {
+  .sign-in-split {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .sign-in-split__brand {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    /* Room for fixed-position Back control */
+    padding-top: clamp(3.75rem, 12vw, 4.5rem);
+    padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  .sign-in-split__form {
+    flex: 1;
+    justify-content: flex-start;
+    padding-top: clamp(1.25rem, 3vw, 2rem);
+  }
 }
 
 .sign-in-brand {
   text-align: center;
-  padding: 0 0.25rem;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sign-in-eyebrow {
   margin: 0 0 0.35rem;
-  font-size: 0.75rem;
+  font-size: clamp(0.8rem, 1.1vw + 0.4rem, 1rem);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -237,36 +320,145 @@
 
 .sign-in-title-main {
   margin: 0 0 0.5rem;
-  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: clamp(2rem, 3.5vmin + 1rem, 4rem);
   font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.08;
   color: var(--text-h);
+  overflow-wrap: anywhere;
 }
 
 .sign-in-tagline {
   margin: 0 auto;
-  max-width: 22rem;
+  max-width: min(36rem, 100%);
   color: var(--text);
-  font-size: 0.9375rem;
-  line-height: 1.5;
+  font-size: clamp(1rem, 1.2vw + 0.55rem, 1.35rem);
+  line-height: 1.55;
   opacity: 0.92;
 }
 
 .sign-in-card-wrap {
   text-align: left;
   width: 100%;
+  max-width: none;
+  min-width: 0;
 }
 
-.sign-in-root {
+/* Clerk OAuth rows ignore theme foreground on dark — force readable tokens */
+@media (prefers-color-scheme: dark) {
+  .sign-in-card-wrap {
+    --clerk-color-foreground: #f3f4f6;
+    --clerk-color-muted-foreground: #d1d5db;
+  }
+
+  /* “Last used” and other hints above OAuth row */
+  .sign-in-card-wrap .sign-in-social-root {
+    color: #d1d5db !important;
+  }
+}
+
+/* Clerk ships a narrow max-width on wrappers — override so the card fills the panel */
+.sign-in-card-wrap .sign-in-root.sign-in-root {
   width: 100% !important;
-  margin: 0 auto;
+  max-width: none !important;
+  margin: 0 !important;
 }
 
-.sign-in-card {
+.sign-in-card-wrap .sign-in-root.sign-in-root > * {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Extra Clerk wrappers often keep a ~400px max-width one level down */
+.sign-in-card-wrap .sign-in-root.sign-in-root > * > * {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+.sign-in-card.sign-in-card {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  padding: clamp(1.65rem, 3vw, 2.85rem) clamp(1.5rem, 2.8vw, 2.65rem) !important;
+  min-height: clamp(20rem, 48vh, 34rem) !important;
+  /* Clerk sets bg via variables; edge definition on dark */
   box-shadow:
-    0 1px 3px rgb(0 0 0 / 0.08),
-    0 12px 40px rgb(0 0 0 / 0.12);
+    0 0 0 1px rgb(255 255 255 / 0.06),
+    0 20px 50px rgb(0 0 0 / 0.45) !important;
+  border-radius: clamp(0.75rem, 1.5vw, 1.125rem) !important;
+}
+
+@media (prefers-color-scheme: light) {
+  .sign-in-card.sign-in-card {
+    box-shadow:
+      0 1px 3px rgb(0 0 0 / 0.06),
+      0 14px 40px rgb(0 0 0 / 0.1) !important;
+  }
+}
+
+/* Social OAuth — Clerk often renders near-black labels on dark fills */
+@media (prefers-color-scheme: dark) {
+  .sign-in-card-wrap button.sign-in-social-btn {
+    color: #f3f4f6 !important;
+    -webkit-text-fill-color: #f3f4f6 !important;
+    background-color: #2d3140 !important;
+    border: 1px solid #5c6578 !important;
+    box-shadow: none !important;
+  }
+
+  .sign-in-card-wrap button.sign-in-social-btn:hover {
+    background-color: #383e50 !important;
+    border-color: #6b758c !important;
+  }
+
+  .sign-in-card-wrap button.sign-in-social-btn:focus-visible {
+    outline: 2px solid rgba(192, 132, 252, 0.65);
+    outline-offset: 2px;
+  }
+
+  /* Nested label text (Clerk wraps copy in spans) */
+  .sign-in-card-wrap button.sign-in-social-btn span,
+  .sign-in-card-wrap button.sign-in-social-btn div {
+    color: #f3f4f6 !important;
+    -webkit-text-fill-color: #f3f4f6 !important;
+    opacity: 1 !important;
+  }
+
+  /* Black / monochrome provider marks → light */
+  .sign-in-card-wrap button.sign-in-social-btn svg {
+    color: #f3f4f6 !important;
+    opacity: 1 !important;
+  }
+
+  .sign-in-card-wrap button.sign-in-social-btn svg path[fill="#000"],
+  .sign-in-card-wrap button.sign-in-social-btn svg path[fill="black"],
+  .sign-in-card-wrap button.sign-in-social-btn svg path[fill="#000000"] {
+    fill: currentColor !important;
+  }
+
+  .sign-in-card-wrap .sign-in-social-label {
+    color: #f3f4f6 !important;
+    -webkit-text-fill-color: #f3f4f6 !important;
+  }
+
+  .sign-in-card-wrap .sign-in-social-icon {
+    color: #f3f4f6 !important;
+    opacity: 1 !important;
+  }
+
+  .sign-in-card-wrap .sign-in-social-icon svg path[fill="#000"],
+  .sign-in-card-wrap .sign-in-social-icon svg path[fill="black"],
+  .sign-in-card-wrap .sign-in-social-icon svg path[fill="#000000"] {
+    fill: currentColor !important;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .sign-in-card-wrap button.sign-in-social-btn {
+    border-width: 1px !important;
+  }
 }
 
 /* Hide Clerk’s generic “Sign in to My Application” block; we use `.sign-in-brand` */
@@ -285,7 +477,7 @@
 .sign-in-logo-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: clamp(0.5rem, 2vw, 1rem);
 }
 
 /* Brand logo (public/speechbridge-logo.png) */
@@ -312,6 +504,12 @@
 
 .brand-logo--hero {
   height: clamp(72px, 18vw, 120px);
+  width: auto;
+}
+
+/* Sign-in mark — vmin so it scales on large / wide monitors (old cap at 9rem was tiny) */
+.brand-logo--signin {
+  height: clamp(5.25rem, 22vmin, 12rem);
   width: auto;
 }
 
@@ -392,46 +590,155 @@
   outline-offset: 2px;
 }
 
-/* Mic button */
-.ss-mic-btn {
+/* ── Logo record button + outer disc + ripples ──────────── */
+.ss-logo-record {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 1rem 1.25rem;
-  border: 2px dashed var(--border);
-  border-radius: 1rem;
-  background: var(--code-bg);
-  color: var(--text-h);
-  font-family: var(--sans);
-  font-size: 1rem;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 
-.ss-mic-btn:hover {
-  border-color: var(--accent-border);
-}
-
-.ss-mic-btn--active {
-  border-color: #ef4444;
-  border-style: solid;
-  background: rgba(239, 68, 68, 0.08);
-  animation: pulse-border 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse-border {
-  0%, 100% { border-color: #ef4444; }
-  50% { border-color: #fca5a5; }
-}
-
-.ss-mic-icon {
-  font-size: 1.5rem;
+.ss-logo-orbit {
+  position: relative;
+  width: clamp(120px, 28vw, 180px);
+  height: clamp(120px, 28vw, 180px);
   flex-shrink: 0;
 }
 
-.ss-mic-label {
+/* Outward ripples (only while recording) */
+.ss-record-ripples {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ss-ripple-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  margin-left: -50%;
+  margin-top: -50%;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2px solid rgb(168 85 247 / 0.42);
+  animation-name: ss-ripple-out;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes ss-ripple-out {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.72);
+    opacity: 0;
+  }
+}
+
+/* Filled disc + outer ring (vibrates via inline transform while recording) */
+.ss-logo-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  background: var(--code-bg);
+  z-index: 1;
+  pointer-events: none;
+  transition: border-color 0.3s, background 0.3s;
+  will-change: transform, box-shadow;
+}
+
+.ss-logo-disc--active {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.06);
+}
+
+.ss-logo-orbit:hover .ss-logo-disc {
+  border-color: var(--accent, #a855f7);
+  box-shadow: 0 0 24px rgb(168 85 247 / 0.2);
+}
+
+.ss-logo-orbit:hover .ss-logo-disc--active {
+  box-shadow: 0 0 32px rgb(168 85 247 / 0.35);
+}
+
+/* Transparent hit target on top of disc */
+.ss-logo-btn {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: visible;
+}
+
+.ss-logo-btn:disabled {
+  cursor: not-allowed;
+}
+
+.ss-logo-orbit:has(.ss-logo-btn:disabled) {
+  opacity: 0.55;
+}
+
+.ss-logo-btn:focus-visible {
+  outline: 2px solid var(--accent, #a855f7);
+  outline-offset: 4px;
+}
+
+/* Fills the inner disc edge-to-edge (tiny inset so art doesn’t sit under the stroke) */
+.ss-logo-img-wrap {
+  position: absolute;
+  inset: 3px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ss-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  transition: transform 0.2s ease-out, filter 0.2s ease-out;
+  will-change: transform, filter;
+  filter: drop-shadow(0 0 10px rgb(168 85 247 / 0.3));
+}
+
+/* No CSS transition while recording — shake is driven every frame by mic level */
+.ss-logo-img--live {
+  transition: none;
+}
+
+.ss-logo-btn--active .ss-logo-img:not(.ss-logo-img--live) {
+  filter: drop-shadow(0 0 22px rgb(168 85 247 / 0.6));
+}
+
+.ss-logo-hint {
+  font-size: 0.875rem;
   font-weight: 500;
+  color: var(--text);
+  opacity: 0.8;
 }
 
 /* Preview + submit */
