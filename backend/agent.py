@@ -13,17 +13,9 @@ from util.logger import setup_logger
 
 load_dotenv()
 
-# In serverless environments (Vercel, Lambda), use stdout logging only
-# File system is read-only except for /tmp, and logs are captured automatically
-IS_SERVERLESS = (
-    os.environ.get('VERCEL_ENV') or  # Vercel automatic env var
-    os.environ.get('VERCEL') or       # Vercel (if system vars enabled)
-    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or  # AWS Lambda
-    os.path.exists('/var/task')       # Vercel/Lambda filesystem indicator
-)
-log_file = None if IS_SERVERLESS else 'logs/agent.log'
-
-logger = setup_logger('agent', log_file=log_file, level=logging.DEBUG)
+# Logger automatically handles read-only filesystems (Vercel/Lambda)
+# by skipping file logging if filesystem is read-only
+logger = setup_logger('agent', log_file='logs/agent.log', level=logging.DEBUG)
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
