@@ -20,9 +20,9 @@ frontend/.agents/
 frontend/.agent/
 frontend/skills-lock.json
 
-# Convex CLI + root npm deps
+# Convex CLI (frontend) + root npm deps
 /node_modules/
-.convex/
+frontend/.convex/
 
 # General
 .DS_Store

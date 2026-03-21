@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { UserButton } from "@clerk/clerk-react";
-import { api } from "../../convex/_generated/api";
+import { api } from "../convex/_generated/api";
 import { SpeechSession } from "./SpeechSession.jsx";
 import { SessionSidebar } from "./SessionSidebar.jsx";
 import { OnboardingFlow } from "./OnboardingFlow.jsx";

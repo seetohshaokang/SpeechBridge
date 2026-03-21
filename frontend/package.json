@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "convex:dev": "npm run convex:dev --prefix .."
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "convex:dashboard": "convex dashboard"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.4",
