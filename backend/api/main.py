@@ -19,13 +19,11 @@ from pydantic import BaseModel
 
 from agent import run_agent, DEFAULT_VOICE_ID
 
+from util.logger import setup_logger
+
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
-)
-logger = logging.getLogger(__name__)
+logger = setup_logger('api', log_file='logs/api.log', level=logging.INFO)
 
 CONVEX_URL = os.environ.get("CONVEX_URL", "")
 
