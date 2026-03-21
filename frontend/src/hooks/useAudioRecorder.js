@@ -1,22 +1,55 @@
 import { useState, useRef, useCallback } from "react";
 
 /**
- * Hook that wraps the MediaRecorder API.
+ * Hook that wraps the MediaRecorder API + Web Audio AnalyserNode.
  *
- * Returns { isRecording, seconds, start, stop }
+ * Returns { isRecording, seconds, audioLevel, analyserRef, start, stop }
+ *   - audioLevel: 0‑1 normalised RMS amplitude (updates ~60 fps via rAF)
+ *   - analyserRef: ref to the AnalyserNode (for custom drawing)
  * `stop` resolves with a Blob (webm audio).
  */
 export function useAudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
 
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
   const timer = useRef(null);
   const resolveBlob = useRef(null);
 
+  const audioCtx = useRef(null);
+  const analyserRef = useRef(null);
+  const rafId = useRef(null);
+  const dataArray = useRef(null);
+
+  function pollLevel() {
+    if (!analyserRef.current || !dataArray.current) return;
+    analyserRef.current.getByteFrequencyData(dataArray.current);
+    let sum = 0;
+    for (let i = 0; i < dataArray.current.length; i++) sum += dataArray.current[i];
+    const avg = sum / dataArray.current.length / 255;
+    // Curve so quiet speech still moves the UI; cap at 1
+    setAudioLevel(Math.min(Math.pow(Math.max(avg, 0), 0.55) * 2.4, 1));
+    rafId.current = requestAnimationFrame(pollLevel);
+  }
+
   const start = useCallback(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Browsers start AudioContext suspended until resumed (often after tap)
+    if (ctx.state === "suspended") await ctx.resume();
+
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.82;
+    source.connect(analyser);
+    audioCtx.current = ctx;
+    analyserRef.current = analyser;
+    dataArray.current = new Uint8Array(analyser.frequencyBinCount);
+    rafId.current = requestAnimationFrame(pollLevel);
 
     const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
       ? "audio/webm;codecs=opus"
@@ -32,6 +65,11 @@ export function useAudioRecorder() {
     recorder.onstop = () => {
       stream.getTracks().forEach((t) => t.stop());
       clearInterval(timer.current);
+      cancelAnimationFrame(rafId.current);
+      audioCtx.current?.close();
+      audioCtx.current = null;
+      analyserRef.current = null;
+      setAudioLevel(0);
       const blob = new Blob(chunks.current, { type: mimeType });
       resolveBlob.current?.(blob);
       resolveBlob.current = null;
@@ -55,5 +93,5 @@ export function useAudioRecorder() {
     });
   }, []);
 
-  return { isRecording, seconds, start, stop };
+  return { isRecording, seconds, audioLevel, analyserRef, start, stop };
 }

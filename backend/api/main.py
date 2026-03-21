@@ -1,6 +1,6 @@
 """
 SpeechBridge — FastAPI backend entry point
-Run with: uvicorn api.main:app --reload --port 8000
+Run with: uvicorn api.main:app --reload --port 8001
 """
 
 import os
@@ -98,7 +98,7 @@ class ProcessResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    """So opening http://localhost:8000/ in a browser isn't a 404."""
+    """So opening the API root in a browser isn't a 404."""
     return {
         "service": "SpeechBridge",
         "health": "/health",

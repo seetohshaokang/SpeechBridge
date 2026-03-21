@@ -1,41 +1,61 @@
 /* ── Landing page ───────────────────────────────────── */
 
 .landing {
+  /*
+   * Full browser width — only fluid side gutters (scales with vw).
+   * align-items: stretch so sections span 100% (center was boxing content).
+   */
+  --landing-gutter: clamp(0.875rem, 3.5vw, 3.5rem);
   width: 100%;
   max-width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   text-align: center;
   box-sizing: border-box;
+}
+
+/* Nav — large lockup: icon + wordmark should read like a real header mark */
+.landing-nav .brand-logo--nav {
+  height: clamp(64px, 11vmin, 112px);
+  width: auto;
 }
 
 /* Nav */
 .landing-nav {
   width: 100%;
-  max-width: min(72rem, 100%);
+  max-width: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
-  padding: 1.25rem clamp(1rem, 4vw, 2.5rem);
+  padding: clamp(1.25rem, 2.8vw, 1.85rem) var(--landing-gutter);
   box-sizing: border-box;
 }
 
 .landing-brand-lockup {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: clamp(0.85rem, 1.6vw, 1.35rem);
   min-width: 0;
 }
 
+/* Wordmark only — Outfit reads cleaner at size than system UI */
 .landing-logo {
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(2.05rem, 4.8vmin + 0.5rem, 3.35rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
   color: var(--text-h);
+}
+
+/* Sign in stays visually balanced next to oversized wordmark */
+.landing-nav .btn--ghost {
+  font-size: clamp(1rem, 1.35vw, 1.15rem);
+  padding: 0.65em 1.35em;
 }
 
 .landing-hero-logo {
@@ -44,31 +64,31 @@
   margin-bottom: 1.25rem;
 }
 
-/* Hero */
+/* Hero — edge-to-edge with shared gutters */
 .landing-hero {
   width: 100%;
-  max-width: min(42rem, 100%);
-  padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 4vw, 2.5rem) 0;
+  max-width: none;
+  padding: clamp(3rem, 8vw, 6rem) var(--landing-gutter) 0;
   box-sizing: border-box;
 }
 
 .landing-badge {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: clamp(0.8rem, 1.2vw, 0.875rem);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
   background: var(--accent-bg);
-  padding: 0.3rem 0.85rem;
+  padding: 0.35rem 1rem;
   border-radius: 999px;
   margin-bottom: 1.25rem;
 }
 
 .landing-headline {
-  font-size: clamp(2.25rem, 7vw, 3.5rem);
+  font-size: clamp(2.65rem, 5.5vw, 4.75rem);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.08;
   letter-spacing: -0.04em;
   margin: 0 0 1.25rem;
   color: var(--text-h);
@@ -82,10 +102,10 @@
 }
 
 .landing-sub {
-  max-width: 34rem;
+  max-width: min(44rem, 100%);
   margin: 0 auto 2rem;
-  font-size: clamp(0.95rem, 2.5vw, 1.125rem);
-  line-height: 1.6;
+  font-size: clamp(1.05rem, 2.1vw, 1.35rem);
+  line-height: 1.62;
   color: var(--text);
 }
 
@@ -98,7 +118,7 @@
 
 .landing-backend-status {
   margin: 1.25rem 0 0;
-  font-size: 0.8125rem;
+  font-size: clamp(0.875rem, 1.2vw, 0.9375rem);
   color: var(--text);
   opacity: 0.85;
 }
@@ -123,8 +143,8 @@
 .btn--primary {
   background: var(--accent);
   color: #fff;
-  padding: 0.6rem 1.4rem;
-  font-size: 0.9375rem;
+  padding: 0.65rem 1.5rem;
+  font-size: clamp(0.95rem, 1.2vw, 1.05rem);
   box-shadow: 0 2px 8px rgba(170, 59, 255, 0.25);
 }
 
@@ -133,15 +153,15 @@
 }
 
 .btn--lg {
-  padding: 0.75rem 1.75rem;
-  font-size: 1rem;
+  padding: 0.85rem 2rem;
+  font-size: clamp(1.05rem, 1.3vw, 1.15rem);
 }
 
 .btn--ghost {
   background: transparent;
   color: var(--text-h);
-  padding: 0.55rem 1.1rem;
-  font-size: 0.875rem;
+  padding: 0.6rem 1.25rem;
+  font-size: clamp(0.9rem, 1.1vw, 1rem);
   border: 1.5px solid var(--border);
   border-radius: 0.625rem;
 }
@@ -154,14 +174,14 @@
 /* Sections */
 .landing-section {
   width: 100%;
-  max-width: min(64rem, 100%);
-  padding: clamp(3rem, 6vw, 5rem) clamp(1rem, 4vw, 2.5rem);
+  max-width: none;
+  padding: clamp(3rem, 6vw, 5rem) var(--landing-gutter);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .landing-section-title {
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(1.85rem, 3.8vw, 2.65rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   margin: 0 0 0.5rem;
@@ -170,7 +190,8 @@
 
 .landing-section-sub {
   margin: 0 0 2.5rem;
-  font-size: 1rem;
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  line-height: 1.5;
   color: var(--text);
 }
 
@@ -184,11 +205,31 @@
   text-align: left;
 }
 
+@media (min-width: 900px) {
+  .landing-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+}
+
 .landing-step {
   display: flex;
   gap: 1.25rem;
   align-items: flex-start;
   min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .landing-step {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 0.875rem;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    box-sizing: border-box;
+  }
 }
 
 .landing-step > div:last-child {
@@ -198,41 +239,55 @@
 
 .landing-step h3 {
   margin: 0 0 0.35rem;
-  font-size: 1.05rem;
+  font-size: clamp(1.1rem, 1.4vw, 1.25rem);
   color: var(--text-h);
 }
 
 .landing-step p {
   margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.55;
+  font-size: clamp(0.98rem, 1.2vw, 1.08rem);
+  line-height: 1.58;
   color: var(--text);
 }
 
 .landing-step-num {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.4rem;
+  height: 2.4rem;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: var(--accent-bg);
   color: var(--accent);
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   border: 1.5px solid var(--accent-border);
 }
 
-/* Feature cards — min(100%, …) stops one row from forcing horizontal scroll */
+/*
+ * Feature cards — auto-fill left-clusters when there are fewer items than tracks.
+ * Explicit breakpoints + auto-fit so four cards span the row evenly on desktop.
+ */
 .landing-features {
   display: grid;
   width: 100%;
   max-width: 100%;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(min(100%, 15rem), 1fr)
-  );
+  margin-inline: auto;
   gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 640px) {
+  .landing-features {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-features {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
 }
 
 .landing-feature-card {
@@ -251,20 +306,20 @@
 }
 
 .landing-feature-icon {
-  font-size: 1.5rem;
+  font-size: 1.65rem;
   margin-bottom: 0.75rem;
 }
 
 .landing-feature-card h3 {
   margin: 0 0 0.35rem;
-  font-size: 1rem;
+  font-size: clamp(1.05rem, 1.25vw, 1.15rem);
   color: var(--text-h);
 }
 
 .landing-feature-card p {
   margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: clamp(0.95rem, 1.15vw, 1.05rem);
+  line-height: 1.55;
   color: var(--text);
 }
 
@@ -277,9 +332,9 @@
 }
 
 .pill {
-  font-size: 0.8125rem;
+  font-size: clamp(0.85rem, 1.1vw, 0.9rem);
   font-weight: 600;
-  padding: 0.35rem 0.9rem;
+  padding: 0.4rem 1rem;
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--text-h);
@@ -295,8 +350,10 @@
 /* Footer */
 .landing-footer {
   width: 100%;
-  padding: 1.5rem;
-  font-size: 0.8125rem;
+  max-width: none;
+  margin-inline: 0;
+  padding: 1.5rem var(--landing-gutter);
+  font-size: clamp(0.875rem, 1.1vw, 0.9375rem);
   color: var(--text);
   opacity: 0.7;
   border-top: 1px solid var(--border);
