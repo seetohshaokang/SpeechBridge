@@ -1,10 +1,15 @@
 # Python
 backend/.venv/
+**/__pycache__/
 backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
 backend/*.pyc
 backend/.env
 backend/*.egg-info/
 backend/logs/*.log
+backend/data/
 
 # React
 frontend/node_modules/
