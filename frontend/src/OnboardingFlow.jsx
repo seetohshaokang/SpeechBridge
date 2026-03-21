@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "../convex/_generated/api";
 import { useAudioRecorder } from "./hooks/useAudioRecorder.js";
 import {
   CONDITION_ORDER,

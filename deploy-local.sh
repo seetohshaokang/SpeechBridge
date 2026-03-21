@@ -17,12 +17,11 @@ fi
 BACKEND_PID=$!
 
 echo "⚛️  Starting Frontend (port 5173)..."
-# Subshell so we stay at repo root for Convex below
 (cd frontend && npm run dev) &
 FRONTEND_PID=$!
 
-echo "🗄️  Starting Convex (repo root)..."
-npx convex dev &
+echo "🗄️  Starting Convex (frontend directory)..."
+(cd frontend && npx convex dev) &
 CONVEX_PID=$!
  
 echo ""
