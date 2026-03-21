@@ -6,6 +6,7 @@ def load_dysarthria_patient_samples(
     n_samples: int = 10,
     gender: str = None,  # "Male" or "Female" or None for both
     patient_id: str = None,  # e.g., "M01", "F03"
+    prompt: str = None,  # Filter by specific prompt text
 ) -> list[dict]:
     """
     Load audio samples from dysarthria patients only.
@@ -14,6 +15,7 @@ def load_dysarthria_patient_samples(
         n_samples: Number of samples to load
         gender: Filter by "Male" or "Female" (None = all)
         patient_id: Filter by specific patient (e.g., "M01")
+        prompt: Filter by specific prompt text (exact match)
     
     Returns:
         List of dicts with audio_b64, expected_text, metadata
@@ -28,6 +30,10 @@ def load_dysarthria_patient_samples(
     if patient_id:
         # Filter by patient ID in the path
         df = df[df["Wav_path"].str.contains(f"/{patient_id}/")]
+    
+    if prompt:
+        # Use contains instead of exact match to handle CSV formatting inconsistencies
+        df = df[df["Prompts"].str.contains(prompt, na=False, regex=False)]
     
     samples = df.head(n_samples)
     
