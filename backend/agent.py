@@ -42,7 +42,7 @@ class GeminiKeyManager:
     def _build(self, i: int) -> ChatGoogleGenerativeAI:
         logger.info(f"Gemini: activating key slot {i + 1}")
         return ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-3.0",
             google_api_key=self.keys[i],
             temperature=0.2,
         )
