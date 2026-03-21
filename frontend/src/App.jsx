@@ -1,139 +1,78 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from "react";
+import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { AuthenticatedApp } from "./AuthenticatedApp.jsx";
+import { SignInPage } from "./SignInPage.jsx";
+import { LandingPage } from "./LandingPage.jsx";
+import "./App.css";
+import "./landing.css";
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [backendStatus, setBackendStatus] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [backendStatus, setBackendStatus] = useState(null);
+  const [backendLoading, setBackendLoading] = useState(true);
 
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/health`)
-        const data = await response.json()
-        setBackendStatus(data.status)
+        const base = import.meta.env.VITE_API_URL;
+        if (!base) {
+          setBackendStatus("unset");
+          return;
+        }
+        const response = await fetch(`${base}/health`);
+        const data = await response.json();
+        setBackendStatus(data.status);
       } catch (error) {
-        setBackendStatus('error')
-        console.error('Backend connection failed:', error)
+        setBackendStatus("error");
+        console.error("Backend connection failed:", error);
       } finally {
-        setLoading(false)
+        setBackendLoading(false);
       }
-    }
-    checkBackend()
-  }, [])
+    };
+    void checkBackend();
+  }, []);
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>SpeechBridge</h1>
-          <p>
-            Backend Status: {loading ? '...' : backendStatus === 'ok' ? '✓ Connected' : '✗ Disconnected'}
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <AuthLoading>
+        <main className="app-main app-main--narrow">
+          <p>Checking session…</p>
+        </main>
+      </AuthLoading>
 
-      <div className="ticks"></div>
+      <Unauthenticated>
+        {showSignIn ? (
+          <main className="app-main app-main--auth">
+            <button
+              className="btn btn--ghost"
+              style={{ position: "absolute", top: "1.25rem", left: "1.25rem" }}
+              onClick={() => setShowSignIn(false)}
+            >
+              ← Back
+            </button>
+            <SignInPage />
+          </main>
+        ) : (
+          <main className="app-main">
+            <LandingPage
+              onGetStarted={() => setShowSignIn(true)}
+              backendLoading={backendLoading}
+              backendStatus={backendStatus}
+            />
+          </main>
+        )}
+      </Unauthenticated>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      <Authenticated>
+        <main className="app-main app-main--narrow">
+          <AuthenticatedApp
+            backendLoading={backendLoading}
+            backendStatus={backendStatus}
+          />
+        </main>
+      </Authenticated>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
