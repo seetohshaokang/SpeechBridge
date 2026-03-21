@@ -49,7 +49,7 @@ export function LandingPage({
             : backendStatus === "ok"
               ? "✓ Connected"
               : backendStatus === "unset"
-                ? "— set API_URL to check"
+                ? "— set VITE_API_URL to check"
                 : "✗ Disconnected"}
         </p>
       </section>

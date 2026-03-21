@@ -79,7 +79,7 @@ Edit **`backend/.env`** and set:
 | `GEMINI_API_KEY_2` | Yes | Used when key 1 hits quota |
 | `GEMINI_API_KEY_3` | Yes | Used when earlier keys hit quota |
 | `GEMINI_CHAT_MODEL` | No | Default in code is a fast Flash Lite model; override if your project returns 404 |
-| `CONVEX_URL` | No | Convex HTTP URL if you want `POST /process` to persist sessions via Convex |
+| `CONVEX_URL` | Yes (for DB writes) | Same value as frontend **`VITE_CONVEX_URL`** (`https://….convex.cloud`). The Python API uses this to call Convex **`sessions:save`** after each `/process`. If unset, processing still works but **`sessions` stays empty**. |
 | `FRONTEND_URL` | No | Extra CORS origin for production frontends |
 
 **Quick health check** (after the server is running — see below):
@@ -103,7 +103,7 @@ npm install        # Convex CLI + shared dependency (run once after clone)
 
 **Convex + Clerk (first time)**
 
-1. From the **repo root**, run **`npm run convex:dev`** (same as `npx convex dev`) and log in; create or link a deployment. The CLI watches **`./convex/`** and syncs functions. Add **`CONVEX_URL=...`** (and optionally **`CONVEX_SITE_URL=...`**) to **`frontend/.env.local`** when prompted (Vite only reads env files under `frontend/`; see `frontend/vite.config.js` — use **`API_URL`**, **`CONVEX_*`**, **`CLERK_PUBLISHABLE_KEY`**, not `VITE_*`.)
+1. From the **repo root**, run **`npm run convex:dev`** (same as `npx convex dev`) and log in; create or link a deployment. The CLI watches **`./convex/`** and syncs functions. Put the deployment URL in **`frontend/.env.local`** as **`VITE_CONVEX_URL=...`** (and optionally **`VITE_CONVEX_SITE_URL=...`**) and the **same URL** in **`backend/.env`** as **`CONVEX_URL=...`** (no `VITE_` prefix — that file is not read by Vite). Without **`CONVEX_URL`**, the backend never writes to Convex.
 2. Set Convex to validate Clerk JWTs (from **repo root**):
    ```bash
    npx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-instance>.clerk.accounts.dev"
@@ -141,10 +141,10 @@ Edit **`frontend/.env.local`**:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `API_URL` | Yes (for full flow) | Backend base URL, e.g. `http://localhost:8001` |
-| `CONVEX_URL` | Yes (for Convex) | Convex deployment URL (`.convex.cloud`), from dashboard / `npm run convex:dev` |
-| `CONVEX_SITE_URL` | Optional | Convex site URL (`.convex.site`); use if you rely on HTTP actions / site URL |
-| `CLERK_PUBLISHABLE_KEY` | Yes (for auth) | Clerk publishable key (`pk_...`) |
+| `VITE_API_URL` | Yes (for full flow) | Backend base URL, e.g. `http://localhost:8001` |
+| `VITE_CONVEX_URL` | Yes (for Convex) | Convex deployment URL (`.convex.cloud`), from dashboard / `npm run convex:dev` |
+| `VITE_CONVEX_SITE_URL` | Optional | Convex site URL (`.convex.site`); use if you rely on HTTP actions / site URL |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Yes (for auth) | Clerk publishable key (`pk_...`) |
 
 ---
 
@@ -211,10 +211,11 @@ You still run **`npm run convex:dev`** from the **repo root** separately if you 
 | Gemini `404` / model not found | Set `GEMINI_CHAT_MODEL` in `backend/.env` to a model your API key supports (see [AI Studio](https://aistudio.google.com)). |
 | `'list' object has no attribute 'strip'` | Fixed in current `agent.py` (normalizes Gemini message content). Pull latest. |
 | `ELEVENLABS_API_KEY` / `GEMINI_*` KeyError | Fill **`backend/.env`**; keys must be plain strings, not JSON arrays. |
-| Frontend can’t reach API | `API_URL=http://localhost:8001` in **`frontend/.env.local`**; restart `npm run dev`. |
+| Frontend can’t reach API | `VITE_API_URL=http://localhost:8001` in **`frontend/.env.local`**; restart `npm run dev`. |
 | CORS errors | Backend allows `http://localhost:5173` by default; add `FRONTEND_URL` if you use another origin. |
 | Convex auth errors | Set `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment (`npx convex env set …` from **repo root**); Clerk Convex integration enabled. |
 | Convex CLI “can’t find convex folder” | Run Convex commands from **repo root** (`cd SpeechBridge`), not `frontend/`. |
+| Convex **`sessions` table empty** | Set **`CONVEX_URL`** in **`backend/.env`** to the same `.convex.cloud` URL as **`VITE_CONVEX_URL`**, restart FastAPI, and check logs for `Convex save failed` / `CONVEX_URL is not set`. |
 | **`frontend/convex/_generated` appeared** | The Convex CLI writes `convex/` relative to the shell’s cwd. Running `npx convex dev` **inside `frontend/`** creates a useless stub there. **Delete `frontend/convex`**, then only use **`npm run convex:dev`** from the **repo root**, or from `frontend/` run **`npm run convex:dev`** (it forwards to the root — see `frontend/package.json`). |
 
 ---

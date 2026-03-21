@@ -24,7 +24,7 @@ export function AuthenticatedApp({
     : backendStatus === "ok"
       ? "✓ Connected"
       : backendStatus === "unset"
-        ? "— set API_URL"
+        ? "— set VITE_API_URL"
         : "✗ Disconnected";
 
   const userId = profile?.clerkUserId ?? profile?.tokenIdentifier ?? "anonymous";

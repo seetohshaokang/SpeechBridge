@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as profile_versions from "../profile_versions.js";
+import type * as sessions from "../sessions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -17,6 +19,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  profile_versions: typeof profile_versions;
+  sessions: typeof sessions;
   users: typeof users;
 }>;
 
