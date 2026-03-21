@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/clerk-react";
+import { BrandLogo } from "./BrandLogo.jsx";
 
 /**
  * Clerk-hosted UI — customize via `appearance` and Clerk Dashboard
@@ -13,6 +14,9 @@ export function SignInPage() {
     <div className="sign-in-page">
       <div className="sign-in-shell">
         <header className="sign-in-brand">
+          <div className="sign-in-logo-wrap">
+            <BrandLogo variant="hero" />
+          </div>
           <p className="sign-in-eyebrow">Welcome</p>
           <h1 className="sign-in-title-main">SpeechBridge</h1>
           <p className="sign-in-tagline">

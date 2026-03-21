@@ -2,6 +2,8 @@
 
 echo "🚀 Starting SpeechBridge local development..."
 echo ""
+echo "Note: Convex is not started here. From repo root run: npm run convex:dev"
+echo ""
 
 trap 'echo ""; echo "🛑 Shutting down..."; kill 0; exit 0' INT TERM
 
