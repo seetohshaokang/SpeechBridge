@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -6,6 +6,24 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [backendStatus, setBackendStatus] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/health`)
+        const data = await response.json()
+        setBackendStatus(data.status)
+      } catch (error) {
+        setBackendStatus('error')
+        console.error('Backend connection failed:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    checkBackend()
+  }, [])
 
   return (
     <>
@@ -16,9 +34,9 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Get started</h1>
+          <h1>SpeechBridge</h1>
           <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+            Backend Status: {loading ? '...' : backendStatus === 'ok' ? '✓ Connected' : '✗ Disconnected'}
           </p>
         </div>
         <button
