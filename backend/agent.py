@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import base64
@@ -6,9 +7,7 @@ from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain.tools import tool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.tools import tool
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -27,6 +26,12 @@ GEMINI_API_KEYS = [
     os.environ["GEMINI_API_KEY_3"],
 ]
 
+# Faster than Pro — default is Flash Lite. Override in .env if your key rejects it:
+#   GEMINI_CHAT_MODEL=gemini-3-flash-preview
+GEMINI_CHAT_MODEL = os.environ.get(
+    "GEMINI_CHAT_MODEL", "gemini-3.1-flash-lite-preview"
+)
+
 _QUOTA_ERRORS = ("429", "ResourceExhausted", "RESOURCE_EXHAUSTED", "quota", "billing")
 
 
@@ -40,11 +45,13 @@ class GeminiKeyManager:
         self._llm = self._build(0)
 
     def _build(self, i: int) -> ChatGoogleGenerativeAI:
-        logger.info(f"Gemini: activating key slot {i + 1}")
+        logger.info(f"Gemini: key slot {i + 1}  model={GEMINI_CHAT_MODEL}")
         return ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model=GEMINI_CHAT_MODEL,
             google_api_key=self.keys[i],
             temperature=0.2,
+            # Short JSON correction — smaller cap = faster responses than Pro / huge defaults
+            max_output_tokens=1024,
         )
 
     def _is_quota(self, exc: Exception) -> bool:
@@ -80,6 +87,30 @@ class GeminiKeyManager:
 
 
 key_manager = GeminiKeyManager(GEMINI_API_KEYS)
+
+
+def _message_content_to_str(content) -> str:
+    """LangChain / Gemini may return str or a list of blocks — normalize to str."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                t = block.get("text")
+                if isinstance(t, str):
+                    parts.append(t)
+                else:
+                    parts.append(str(block))
+            else:
+                text_attr = getattr(block, "text", None)
+                parts.append(text_attr if isinstance(text_attr, str) else str(block))
+        return "".join(parts)
+    return str(content)
 
 
 # ─── Scribe v2 keyterm lists per condition ───────────────────────────────────
@@ -227,7 +258,14 @@ Respond ONLY with valid JSON in this exact format:
 
     response = key_manager.invoke(prompt)
 
-    raw = response.content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    raw = (
+        _message_content_to_str(response.content)
+        .strip()
+        .removeprefix("```json")
+        .removeprefix("```")
+        .removesuffix("```")
+        .strip()
+    )
 
     try:
         parsed = json.loads(raw)
@@ -278,36 +316,48 @@ def synthesise_voice(text: str, voice_id: str = DEFAULT_VOICE_ID) -> dict:
     }
 
 
-# ─── Agent ────────────────────────────────────────────────────────────────────
-
-tools = [transcribe_audio, correct_speech, synthesise_voice]
-
-_prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are SpeechBridge. You help people with speech disabilities communicate clearly.
-
-For every request you MUST call all three tools in this exact order:
-1. transcribe_audio  — get the raw transcript from ElevenLabs
-2. correct_speech    — fix the transcript with Gemini
-3. synthesise_voice  — convert the corrected text to audio
-
-Never skip a step. Never change the order."""),
-    ("human", "{input}"),
-    MessagesPlaceholder(variable_name="agent_scratchpad"),
-])
+# ─── Pipeline ────────────────────────────────────────────────────────────────
+# LangChain 1.2+ removed AgentExecutor / create_tool_calling_agent from
+# `langchain.agents`. The original agent only ever ran these three tools in
+# fixed order, so we call them directly (same behaviour, fewer moving parts).
 
 
-def _build_executor() -> AgentExecutor:
-    agent = create_tool_calling_agent(key_manager.llm, tools, _prompt)
-    return AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        max_iterations=6,
-        return_intermediate_steps=True,
+def _normalize_tool_result(out) -> dict:
+    """Tools may return dict or JSON string depending on LangChain version."""
+    if isinstance(out, dict):
+        return out
+    if isinstance(out, str):
+        try:
+            return json.loads(out)
+        except json.JSONDecodeError:
+            return {"raw": out}
+    return {}
+
+
+def _run_pipeline_sync(audio_b64: str, condition: str, voice_id: str) -> dict:
+    t = _normalize_tool_result(
+        transcribe_audio.invoke({"audio_b64": audio_b64, "condition": condition})
+    )
+    raw = t.get("raw_transcript", "")
+
+    c = _normalize_tool_result(
+        correct_speech.invoke({"raw_transcript": raw, "condition": condition})
     )
 
+    corrected = c.get("corrected_text", "")
+    v = _normalize_tool_result(
+        synthesise_voice.invoke({"text": corrected, "voice_id": voice_id})
+    )
 
-_executor = _build_executor()
+    return {
+        "raw_transcript": raw,
+        "corrected_text": corrected,
+        "confidence": float(c.get("confidence", 0.0) or 0.0),
+        "changes": c.get("changes", []) or [],
+        "audio_b64": v.get("audio_b64"),
+        "audio_format": v.get("format", "mp3"),
+        "gemini_key_used": key_manager.active_index + 1,
+    }
 
 
 # ─── Public entry point ───────────────────────────────────────────────────────
@@ -320,48 +370,15 @@ async def run_agent(
     """
     Called by FastAPI. Runs the full pipeline and returns a clean result dict.
     """
-    global _executor
-
-    payload = json.dumps({
-        "audio_b64": audio_b64,
-        "condition": condition,
-        "voice_id": voice_id,
-    })
-
     prev = key_manager.active_index
     try:
-        result = await _executor.ainvoke({"input": payload})
-    except Exception as exc:
+        return await asyncio.to_thread(
+            _run_pipeline_sync, audio_b64, condition, voice_id
+        )
+    except Exception:
         if key_manager.active_index != prev:
-            logger.warning("Key rotated mid-run — rebuilding executor and retrying")
-            _executor = _build_executor()
-            result = await _executor.ainvoke({"input": payload})
-        else:
-            raise
-
-    steps = result.get("intermediate_steps", [])
-
-    def _tool_out(name: str) -> dict:
-        hit = next((s[1] for s in steps if s[0].tool == name), None)
-        if isinstance(hit, dict):
-            return hit
-        if isinstance(hit, str):
-            try:
-                return json.loads(hit)
-            except Exception:
-                return {"raw": hit}
-        return {}
-
-    t = _tool_out("transcribe_audio")
-    c = _tool_out("correct_speech")
-    v = _tool_out("synthesise_voice")
-
-    return {
-        "raw_transcript":  t.get("raw_transcript", ""),
-        "corrected_text":  c.get("corrected_text", ""),
-        "confidence":      c.get("confidence", 0.0),
-        "changes":         c.get("changes", []),
-        "audio_b64":       v.get("audio_b64"),
-        "audio_format":    v.get("format", "mp3"),
-        "gemini_key_used": key_manager.active_index + 1,
-    }
+            logger.warning("Key rotated mid-run — retrying pipeline once")
+            return await asyncio.to_thread(
+                _run_pipeline_sync, audio_b64, condition, voice_id
+            )
+        raise

@@ -3,6 +3,7 @@ backend/.venv/
 backend/__pycache__/
 backend/*.pyc
 backend/.env
+backend/*.egg-info/
 
 # React
 frontend/node_modules/

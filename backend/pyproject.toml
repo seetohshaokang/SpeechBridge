@@ -3,7 +3,7 @@ name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "elevenlabs>=2.39.0",
     "fastapi>=0.135.1",
@@ -12,5 +12,6 @@ dependencies = [
     "langchain-core>=1.2.20",
     "langchain-google-genai>=4.2.1",
     "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.20",
     "uvicorn>=0.42.0",
 ]

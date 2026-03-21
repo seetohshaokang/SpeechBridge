@@ -96,6 +96,19 @@ class ProcessResponse(BaseModel):
     processing_ms: int
 
 
+# ─── GET / ───────────────────────────────────────────────────────────────────
+
+@app.get("/")
+async def root():
+    """So opening http://localhost:8000/ in a browser isn’t a 404."""
+    return {
+        "service": "SpeechBridge",
+        "health": "/health",
+        "process": "POST /process",
+        "docs": "/docs",
+    }
+
+
 # ─── GET /health ──────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -125,12 +138,23 @@ async def process_audio(
     t_start = time.monotonic()
 
     # ── Validate ──────────────────────────────────────────────────────────────
+    # Browsers send e.g. "audio/webm;codecs=opus" — compare base type only.
+    def _base_mime(ct: str | None) -> str | None:
+        if not ct:
+            return None
+        return ct.split(";", 1)[0].strip().lower()
+
     allowed_types = {
-        "audio/webm", "audio/wav", "audio/mpeg",
-        "audio/mp3", "audio/ogg", "audio/mp4",
-        "application/octet-stream",  # Chrome sometimes sends this for webm
+        "audio/webm",
+        "audio/wav",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/ogg",
+        "audio/mp4",
+        "application/octet-stream",  # some clients for webm
     }
-    if audio.content_type and audio.content_type not in allowed_types:
+    base = _base_mime(audio.content_type)
+    if base and base not in allowed_types:
         raise HTTPException(
             status_code=415,
             detail=f"Unsupported audio type '{audio.content_type}'. Send webm, wav, or mp3.",
