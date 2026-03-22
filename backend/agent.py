@@ -410,7 +410,12 @@ def _run_pipeline_sync(
             "keyterms_override": keyterms_override,
         })
     )
-    raw = t.get("raw_transcript", "")
+    raw = t.get("raw_transcript", "").strip()
+    
+    if not raw:
+        raise ValueError(
+            "No speech detected in audio. Please ensure you're speaking clearly."
+        )
 
     # ── Step 2: Correct ───────────────────────────────────────────────────
     c = _normalize_tool_result(
@@ -420,7 +425,11 @@ def _run_pipeline_sync(
             "pattern_summary":   pattern_summary,
         })
     )
-    corrected = c.get("corrected_text", "")
+    corrected = c.get("corrected_text", "").strip()
+    
+    if not corrected:
+        logger.warning("Gemini returned empty correction — using raw transcript")
+        corrected = raw
 
     # ── Step 3: Synthesise ────────────────────────────────────────────────
     v = _normalize_tool_result(

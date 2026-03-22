@@ -250,6 +250,13 @@ async def process_audio(
             pattern_summary=pattern_summary,
             keyterms_override=keyterms_override,
         )
+    except ValueError as exc:
+        if "No speech detected" in str(exc):
+            raise HTTPException(
+                status_code=422,
+                detail=str(exc),
+            )
+        raise
     except Exception as exc:
         logger.error(f"Agent error: {exc}", exc_info=True)
         raise HTTPException(
