@@ -118,6 +118,8 @@ npm run convex:deploy    # deploy functions to your linked Convex deployment
 npm run convex:dashboard # open Convex dashboard via CLI
 ```
 
+**Using production Convex** — Point **`VITE_CONVEX_URL`**, **`backend/.env` `CONVEX_URL`**, **`telegram-mtproto-voice/.env` `CONVEX_URL`**, and repo root **`CONVEX_DEPLOYMENT`** (e.g. `prod:groovy-corgi-683`) at the same **`.convex.cloud`** URL. After changing deployment, run **`npx convex deploy`** from **`frontend/`** so functions and schema exist on prod, and set **`npx convex env set CLERK_JWT_ISSUER_DOMAIN ...`** on that deployment if you use Clerk.
+
 Other common commands (from `frontend/`): `npx convex env list`, `npx convex env set …`, `npx convex logs`.
 
 ---
