@@ -5,6 +5,7 @@ import { api } from "../convex/_generated/api";
 import { SpeechSession } from "./SpeechSession.jsx";
 import { SessionSidebar } from "./SessionSidebar.jsx";
 import { OnboardingFlow } from "./OnboardingFlow.jsx";
+import { Dashboard } from "./Dashboard.jsx";
 import { BrandLogo } from "./BrandLogo.jsx";
 import { clerkUserButtonAppearance } from "./clerkUserButtonTheme.js";
 import { useMediaQuery } from "./hooks/useMediaQuery.js";
@@ -36,6 +37,7 @@ export function AuthenticatedApp() {
   const [viewingSession, setViewingSession] = useState(null);
   /** Bumps when user clicks “New session” so SpeechSession resets even if already on the record view. */
   const [sessionResetKey, setSessionResetKey] = useState(0);
+  const [currentView, setCurrentView] = useState("session");
 
   const sidebarOpen = isDesktop || mobileSidebarOpen;
 
@@ -105,6 +107,24 @@ export function AuthenticatedApp() {
               <span className="chat-topbar-title">SpeechBridge</span>
             </div>
           </div>
+          {!needsOnboarding && (
+            <nav className="topbar-tabs">
+              <button
+                type="button"
+                className={`topbar-tab${currentView === "session" ? " topbar-tab--active" : ""}`}
+                onClick={() => setCurrentView("session")}
+              >
+                Practice
+              </button>
+              <button
+                type="button"
+                className={`topbar-tab${currentView === "dashboard" ? " topbar-tab--active" : ""}`}
+                onClick={() => setCurrentView("dashboard")}
+              >
+                Dashboard
+              </button>
+            </nav>
+          )}
           <div className="chat-topbar-right" />
         </header>
 
@@ -125,6 +145,8 @@ export function AuthenticatedApp() {
             <p className="onb-loading">Loading profile…</p>
           ) : needsOnboarding ? (
             <OnboardingFlow userId={userId} />
+          ) : currentView === "dashboard" ? (
+            <Dashboard userId={userId} />
           ) : (
             <SpeechSession
               userId={userId}
