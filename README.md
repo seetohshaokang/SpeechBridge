@@ -176,16 +176,22 @@ npm run dev
 
 Open **http://localhost:5173** (or the URL Vite prints).
 
-### Optional: one script for all services
+### One command — backend + frontend + Convex
 
 From the **repo root**:
 
 ```bash
-chmod +x deploy-local.sh
+chmod +x deploy-local.sh   # once
 ./deploy-local.sh
 ```
 
-This starts **backend** (port **8001**), **frontend** (port **5173**), and **Convex dev** (all from the script).
+Or:
+
+```bash
+npm run dev:all
+```
+
+This starts **FastAPI** (port **8001**), **Vite** (port **5173**), and **`convex dev`** in the background. **Ctrl+C** stops all three.
 
 ---
 

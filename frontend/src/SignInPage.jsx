@@ -60,8 +60,7 @@ export function SignInPage() {
               appearance={{
                 variables: {
                   ...variables,
-                  /* Base UI text; was 1.25rem — +40% for readability */
-                  fontSize: "1.75rem",
+                  fontSize: "1rem",
                 },
               elements: {
                 rootBox: "sign-in-root",
@@ -74,6 +73,8 @@ export function SignInPage() {
                   "sign-in-social-btn transition-transform hover:scale-[1.01] active:scale-[0.99]",
                 socialButtonsBlockButtonText: "sign-in-social-label",
                 socialButtonsProviderIcon: "sign-in-social-icon",
+                socialButtonsBlockButtonArrow: { display: "none" },
+                badge: { display: "none" },
               },
               layout: {
                 socialButtonsPlacement: "top",

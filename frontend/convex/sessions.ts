@@ -17,6 +17,7 @@ export const save = mutation({
     confidence:     v.number(),
     changes:        v.array(v.string()),
     processing_ms:  v.number(),
+    language:       v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now            = Date.now();
@@ -32,6 +33,7 @@ export const save = mutation({
       changes:        args.changes,
       processing_ms:  args.processing_ms,
       created_at:     now,
+      ...(args.language ? { language: args.language } : {}),
     });
 
     // Increment counters on the user row — user row is owned by Clerk auth,
@@ -74,6 +76,7 @@ export const getForSummarisation = query({
       corrected_text: s.corrected_text,
       confidence:     s.confidence,
       created_at:     s.created_at,
+      language:       s.language,
     }));
   },
 });

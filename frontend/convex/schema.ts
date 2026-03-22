@@ -42,6 +42,7 @@ export default defineSchema({
     changes:        v.array(v.string()),
     processing_ms:  v.number(),
     created_at:     v.number(),
+    language:       v.optional(v.string()),   // ISO 639-1 code detected by Scribe
   })
     .index("by_user",            ["user_id", "created_at"])
     .index("by_session_id",      ["session_id"])

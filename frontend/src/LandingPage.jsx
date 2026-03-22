@@ -55,8 +55,8 @@ export function LandingPage({
             <div>
               <h3>Record or upload</h3>
               <p>
-                Speak into the mic or drop an audio file. Gemini's multimodal
-                engine transcribes every word.
+                Speak into the mic or drop an audio file. Gemini 3 Flash
+                transcribes every word.
               </p>
             </div>
           </li>
@@ -128,7 +128,7 @@ export function LandingPage({
           <span className="pill">React</span>
           <span className="pill">FastAPI</span>
           <span className="pill">LangChain</span>
-          <span className="pill">Gemini 1.5 Flash</span>
+          <span className="pill">Gemini 3 Flash</span>
           <span className="pill">ElevenLabs TTS</span>
           <span className="pill">Convex</span>
           <span className="pill">Clerk Auth</span>

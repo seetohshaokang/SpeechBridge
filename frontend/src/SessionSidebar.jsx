@@ -29,6 +29,7 @@ export function SessionSidebar({
   selectedSessionId,
   onSelectSession,
   onNewSession,
+  summarisationCount = 0,
 }) {
   const sessions = useQuery(
     api.sessions.listByUser,
@@ -127,24 +128,50 @@ export function SessionSidebar({
             </p>
           )}
 
-          {sessions?.map((s) => (
-            <button
-              key={s._id}
-              type="button"
-              className={`sidebar-item${
-                selectedSessionId === s.session_id ? " sidebar-item--active" : ""
-              }`}
-              onClick={() => handlePick(s)}
-            >
-              <span className="sidebar-item-text">
-                {truncate(s.corrected_text || s.raw_transcript)}
-              </span>
-              <span className="sidebar-item-meta">
-                <span className="sidebar-item-condition">{s.condition}</span>
-                <span className="sidebar-item-date">{formatDate(s.created_at)}</span>
-              </span>
-            </button>
-          ))}
+          {(() => {
+            if (!sessions) return null;
+            const items = [];
+            let goodCount = 0;
+            let cardsInserted = 0;
+            for (const s of sessions) {
+              if (s.confidence >= 0.75) goodCount++;
+              if (
+                goodCount > 0 &&
+                goodCount % 10 === 0 &&
+                cardsInserted < summarisationCount &&
+                s.confidence >= 0.75
+              ) {
+                cardsInserted++;
+                items.push(
+                  <div key={`summary-${cardsInserted}`} className="sidebar-summary-card">
+                    <span className="sidebar-summary-icon" aria-hidden>✦</span>
+                    <span className="sidebar-summary-text">
+                      Profile updated — your last 10 sessions personalised your corrections
+                    </span>
+                  </div>,
+                );
+              }
+              items.push(
+                <button
+                  key={s._id}
+                  type="button"
+                  className={`sidebar-item${
+                    selectedSessionId === s.session_id ? " sidebar-item--active" : ""
+                  }`}
+                  onClick={() => handlePick(s)}
+                >
+                  <span className="sidebar-item-text">
+                    {truncate(s.corrected_text || s.raw_transcript)}
+                  </span>
+                  <span className="sidebar-item-meta">
+                    <span className="sidebar-item-condition">{s.condition}</span>
+                    <span className="sidebar-item-date">{formatDate(s.created_at)}</span>
+                  </span>
+                </button>,
+              );
+            }
+            return items;
+          })()}
         </nav>
       </aside>
     </>

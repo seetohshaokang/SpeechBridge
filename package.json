@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "convex:dev": "cd frontend && convex dev",
-    "convex:deploy": "cd frontend && convex deploy",
-    "convex:dashboard": "cd frontend && convex dashboard"
+    "dev:all": "bash deploy-local.sh",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "convex:dashboard": "convex dashboard"
   },
   "dependencies": {
     "convex": "^1.34.0"

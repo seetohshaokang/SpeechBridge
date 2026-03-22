@@ -252,9 +252,7 @@ async def process_audio(
     # ── Save session to Convex (non-blocking — failure won't break the response)
     session_id = f"{user_id}_{int(time.time() * 1000)}"
     try:
-        saved = await convex_mutation(
-            "sessions:save",
-            {
+        save_args = {
                 "session_id":     session_id,
                 "user_id":        user_id,
                 "condition":      condition,
@@ -263,8 +261,10 @@ async def process_audio(
                 "confidence":     result["confidence"],
                 "changes":        result["changes"],
                 "processing_ms":  processing_ms,
-            },
-        )
+        }
+        if result.get("detected_language"):
+            save_args["language"] = result["detected_language"]
+        saved = await convex_mutation("sessions:save", save_args)
         session_id = saved.get("session_id", session_id)
     except Exception as exc:
         logger.warning(f"Convex save failed ({exc}) — returning result anyway.")

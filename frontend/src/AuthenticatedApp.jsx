@@ -81,6 +81,7 @@ export function AuthenticatedApp() {
           selectedSessionId={viewingSession?.session_id ?? null}
           onSelectSession={handleSelectSession}
           onNewSession={handleNewSession}
+          summarisationCount={profile?.summarisation_count ?? 0}
         />
       )}
 
