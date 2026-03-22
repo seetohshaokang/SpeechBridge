@@ -432,6 +432,17 @@ Built with ❤️ at **Cursor Heilbronn Hackathon 2026**
 
 ---
 
+## 🙏 Sponsors & Acknowledgments
+
+Special thanks to our hackathon sponsors who provided free credits and made this project possible:
+
+- **[Cursor](https://cursor.com)** - AI-powered development environment
+- **[Vercel](https://vercel.com)** - Frontend hosting and deployment
+- **[ElevenLabs](https://elevenlabs.io)** - Speech-to-text and text-to-speech APIs
+- **[Convex](https://convex.dev)** - Real-time backend and database
+
+---
+
 ## 📄 License
 
 MIT License - Copyright (c) 2026 SpeechBridge Team
