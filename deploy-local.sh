@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local development deployment script
+# Local development deployment script to deploy both
 
 echo "🚀 Starting SpeechBridge local development..."
 echo ""
