@@ -10,6 +10,7 @@ backend/.env
 backend/*.egg-info/
 backend/logs/
 backend/data/
+backend/tests/
 
 # React
 frontend/node_modules/
