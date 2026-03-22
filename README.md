@@ -16,6 +16,8 @@ One-tap recording → AI correction → Natural playback. No complex setup, work
 
 **Watch it work:** [Demo video coming soon]
 
+**Try it now:** [https://speech-bridge.vercel.app](https://speech-bridge.vercel.app) (no local setup required!)
+
 ---
 
 ## ✨ Key Features
@@ -362,30 +364,14 @@ Open **http://localhost:5173** (or the URL Vite prints).
 
 ---
 
-## 🔧 Troubleshooting
+## 🌐 Access SpeechBridge
 
-<details>
-<summary>Common Issues (click to expand)</summary>
+### 🚀 Live Deployment
+**Try it now:** [https://speech-bridge.vercel.app](https://speech-bridge.vercel.app)
 
-| Issue                                             | Solution                                                                                                                                                                              |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ModuleNotFoundError` (Python)                    | Activate **`backend/.venv`** and run `pip install -e .` or `pip install -r requirements.txt`.                                                                                            |
-| `Form data requires python-multipart`             | Install deps from current `pyproject.toml` / `requirements.txt` (includes `python-multipart`).                                                                                           |
-| `Unsupported audio type 'audio/webm;codecs=opus'` | Use latest `main.py` (base MIME check); restart backend.                                                                                                                                 |
-| Gemini `404` / model not found                    | Set `GEMINI_CHAT_MODEL` in `backend/.env` to a model your API key supports (see [AI Studio](https://aistudio.google.com)).                                                               |
-| `'list' object has no attribute 'strip'`          | Fixed in current `agent.py` (normalizes Gemini message content). Pull latest.                                                                                                            |
-| `ELEVENLABS_API_KEY` / `GEMINI_*` KeyError        | Fill **`backend/.env`**; keys must be plain strings, not JSON arrays.                                                                                                                    |
-| Frontend can’t reach API                          | `VITE_API_URL=http://localhost:8001` in **`frontend/.env.local`**; restart `npm run dev`.                                                                                                |
-| CORS errors                                       | Backend allows `http://localhost:5173` by default; add `FRONTEND_URL` if you use another origin.                                                                                         |
-| Convex auth errors                                | Set `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment (`npx convex env set …` from **`frontend/`**); Clerk Convex integration enabled.                                                  |
-| Convex CLI “can’t find convex folder”             | Run Convex commands from **`frontend/`** directory (`cd frontend`) where `convex/` lives.                                                                                                |
-| Convex **`sessions` table empty**                 | Set **`CONVEX_URL`** in **`backend/.env`** to the same `.convex.cloud` URL as **`VITE_CONVEX_URL`**, restart FastAPI, and check logs for `Convex save failed` / `CONVEX_URL is not set`. |
+No setup required - just open and start using!
 
-</details>
-
----
-
-## 🌐 Useful URLs (Local Development)
+### 💻 Local Development URLs
 
 | Service      | URL                          |
 | ------------ | ---------------------------- |
