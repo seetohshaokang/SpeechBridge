@@ -8,7 +8,7 @@ backend/__pycache__/
 backend/*.pyc
 backend/.env
 backend/*.egg-info/
-backend/logs/*.log
+backend/logs/
 backend/data/
 
 # React
