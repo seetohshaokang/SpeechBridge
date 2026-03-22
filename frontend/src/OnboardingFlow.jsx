@@ -6,6 +6,7 @@ import {
   CONDITION_ORDER,
   ONBOARDING_BY_CONDITION,
 } from "./onboarding/onboardingData.js";
+import { VoiceCloneRecorder } from "./VoiceCloneRecorder.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8001";
 
@@ -205,15 +206,19 @@ export function OnboardingFlow({ userId = "anonymous" }) {
       setPhraseSubmitted(false);
       return;
     }
+    setPhase("voice-clone");
+  }, [data, phraseIndex, totalPhrases]);
+
+  const handleFinishOnboarding = useCallback(async () => {
     setPhase("saving");
     setError(null);
     try {
       await completeOnboarding({ condition: conditionId });
     } catch (e) {
       setError(e?.message ?? "Something went wrong");
-      setPhase("phrases");
+      setPhase("voice-clone");
     }
-  }, [completeOnboarding, conditionId, data, phraseIndex, totalPhrases]);
+  }, [completeOnboarding, conditionId]);
 
   const handleBack = useCallback(() => {
     if (phase === "phrases" && phraseIndex > 0) {
@@ -329,6 +334,37 @@ export function OnboardingFlow({ userId = "anonymous" }) {
             {stepNum >= totalPhrases ? "Finish & start" : "Next phrase"}
           </button>
         </div>
+      </section>
+    );
+  }
+
+  if (phase === "voice-clone" && data) {
+    return (
+      <section className="onb onb--voice-clone" aria-labelledby="onb-vc-title">
+        <div className="onb-toolbar">
+          <button type="button" className="onb-back-link" onClick={() => setPhase("phrases")}>
+            ← Back
+          </button>
+          <span className="onb-progress">Optional</span>
+          <span className="onb-toolbar-spacer" aria-hidden />
+        </div>
+
+        <h1 id="onb-vc-title" className="onb-title">
+          Clone your voice
+        </h1>
+        <p className="onb-lead">
+          Read the passage below so we can make the output audio sound like you.
+          This takes about a minute.
+        </p>
+
+        <VoiceCloneRecorder
+          userId={userId}
+          script={data.voiceScript}
+          onComplete={handleFinishOnboarding}
+          onSkip={handleFinishOnboarding}
+        />
+
+        {error && <p className="onb-error">{error}</p>}
       </section>
     );
   }

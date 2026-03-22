@@ -1,0 +1,17 @@
+SpeechBuddy — Telegram voice processing — consent (template, not legal advice)
+
+Parties: SpeechBuddy / [operator name] and the Telegram user(s) listed below.
+
+Purpose: Download and process voice messages from specific Telegram chats
+(e.g. transcription or speech reconstruction) using an MTProto client
+authorized by [who operates the client].
+
+Consented Telegram chat ID(s): _________________________________
+
+User ID(s) / display name(s): ___________________________________
+
+Date: __________________   Signature: ___________________________
+
+By signing, each party confirms they understand that processing requires
+a Telegram API application (api_id / api_hash from my.telegram.org) and
+a logged-in session that can see messages in the listed chat(s).

@@ -10,6 +10,7 @@
 
 import type * as profile_versions from "../profile_versions.js";
 import type * as sessions from "../sessions.js";
+import type * as telegram_users from "../telegram_users.js";
 import type * as users from "../users.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   profile_versions: typeof profile_versions;
   sessions: typeof sessions;
+  telegram_users: typeof telegram_users;
   users: typeof users;
 }>;
 

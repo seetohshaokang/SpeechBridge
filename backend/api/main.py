@@ -29,6 +29,7 @@ from util.convex_http import (
     parse_convex_response,
 )
 from util.summarise import run_summarisation
+from util.clone_voice import CloneVoiceError, clone_voice_from_upload, http_error_detail
 
 load_dotenv()
 
@@ -119,6 +120,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",    # Vite dev server
+        "http://localhost:5174",    # Vite dev server (alt port)
         "http://localhost:3000",    # CRA dev server
         os.environ.get("FRONTEND_URL", ""),
     ],
@@ -174,6 +176,10 @@ async def process_audio(
     audio: UploadFile = File(..., description="Audio file — webm, wav, or mp3"),
     condition: ConditionType = Form(default="general"),
     user_id: str = Form(default="anonymous"),
+    voice_id: str | None = Form(
+        default=None,
+        description="Optional ElevenLabs voice id (e.g. Telegram clone) — overrides profile lookup",
+    ),
 ):
     """
     Main MVP endpoint.
@@ -216,12 +222,20 @@ async def process_audio(
     # ── Fetch user profile for personalisation ───────────────────────────────
     pattern_summary    = None
     keyterms_override  = None
-    if user_id != "anonymous":
+    user_voice_id      = DEFAULT_VOICE_ID
+    override = (voice_id or "").strip()
+    if override:
+        user_voice_id = override
+        logger.info(f"Using voice_id from request for user={user_id}")
+    elif user_id != "anonymous":
         try:
             profile = await convex_query("users:getProfile", {"user_id": user_id})
             if profile and isinstance(profile, dict):
                 pattern_summary   = profile.get("pattern_summary")
                 keyterms_override = profile.get("keyterms")
+                if profile.get("voice_id"):
+                    user_voice_id = profile["voice_id"]
+                    logger.info(f"Using cloned voice for user={user_id}")
                 if pattern_summary:
                     logger.info(f"Profile loaded for user={user_id} — personalisation active")
         except Exception as exc:
@@ -232,7 +246,7 @@ async def process_audio(
         result = await run_agent(
             audio_b64=audio_b64,
             condition=condition,
-            voice_id=DEFAULT_VOICE_ID,
+            voice_id=user_voice_id,
             pattern_summary=pattern_summary,
             keyterms_override=keyterms_override,
         )
@@ -262,8 +276,7 @@ async def process_audio(
                 "changes":        result["changes"],
                 "processing_ms":  processing_ms,
         }
-        if result.get("detected_language"):
-            save_args["language"] = result["detected_language"]
+        save_args["language"] = "en"
         saved = await convex_mutation("sessions:save", save_args)
         session_id = saved.get("session_id", session_id)
     except Exception as exc:
@@ -298,6 +311,61 @@ async def process_audio(
         gemini_key_used=result["gemini_key_used"],
         processing_ms=processing_ms,
     )
+
+
+# ─── POST /clone-voice ────────────────────────────────────────────────────────
+
+@app.post("/clone-voice")
+async def clone_voice(
+    audio: UploadFile = File(..., description="~1 min voice sample for cloning"),
+    user_id: str = Form(default="anonymous"),
+):
+    """
+    Instant Voice Cloning via ElevenLabs.
+
+    Accepts a multipart form with:
+      - audio   : recorded voice sample (webm / wav / mp3, ideally ~60s)
+      - user_id : Clerk user ID
+
+    Returns { voice_id } which the frontend persists via users:setVoice.
+    """
+    audio_bytes = await audio.read()
+
+    if len(audio_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Audio file is empty.")
+    if len(audio_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Audio too large — max 25 MB.")
+
+    logger.info(
+        f"Voice clone request  user={user_id}  size={len(audio_bytes) / 1024:.1f} KB"
+    )
+
+    try:
+        voice_id = await clone_voice_from_upload(
+            name=f"SpeechBridge-{user_id}",
+            description=f"Auto-cloned voice for SpeechBridge user {user_id}",
+            filename=audio.filename or "voice-sample.webm",
+            audio_bytes=audio_bytes,
+            content_type=audio.content_type,
+        )
+        if not voice_id:
+            raise HTTPException(
+                status_code=502,
+                detail="ElevenLabs did not return a voice_id — check backend logs.",
+            )
+        logger.info(f"Voice cloned  user={user_id}  voice_id={voice_id}")
+    except CloneVoiceError as exc:
+        status, detail = http_error_detail(exc.status_code, exc.body)
+        logger.error(f"Voice cloning API error ({status}): {exc}", exc_info=True)
+        raise HTTPException(status_code=status, detail=detail)
+    except Exception as exc:
+        logger.error(f"Voice cloning failed: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Voice cloning failed: {str(exc)}",
+        )
+
+    return {"voice_id": voice_id}
 
 
 # ─── Global error handler ─────────────────────────────────────────────────────

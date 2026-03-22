@@ -172,32 +172,26 @@ def transcribe_audio(
     audio_b64: str,
     condition: str,
     keyterms_override: list | None = None,
-    language_code: str = "auto",
 ) -> dict:
     """
-    Transcribes speech audio using ElevenLabs Scribe v2.
-    Always call this first. Returns the raw transcript and detected language.
+    Transcribes speech audio using ElevenLabs Scribe v2 (English only).
+    Always call this first. Returns the raw transcript.
 
     Args:
         audio_b64: Base64-encoded audio (webm/wav/mp3).
         condition: One of 'dysarthria', 'stuttering', 'aphasia', 'general'.
-        language_code: ISO 639-1 code or "auto" for auto-detection.
     """
     import time
     t_start = time.time()
     
     audio_bytes = base64.b64decode(audio_b64)
-    logger.debug(f"Transcribing {len(audio_bytes)} bytes [{condition}] lang={language_code}")
+    logger.debug(f"Transcribing {len(audio_bytes)} bytes [{condition}]")
 
-    # Keyterms are English-specific; skip for other languages
-    is_english = language_code in ("en", "auto")
-    if keyterms_override and is_english:
+    if keyterms_override:
         keyterms = keyterms_override[:100]
         logger.debug(f"Using personalised keyterms ({len(keyterms)})")
-    elif is_english:
-        keyterms = _KEYTERMS.get(condition, _KEYTERMS["general"])
     else:
-        keyterms = []
+        keyterms = _KEYTERMS.get(condition, _KEYTERMS["general"])
 
     import io
     audio_file = io.BytesIO(audio_bytes)
@@ -207,22 +201,20 @@ def transcribe_audio(
         "file": audio_file,
         "model_id": "scribe_v2",
         "tag_audio_events": True,
+        "language_code": "en",
     }
-    if language_code != "auto":
-        scribe_kwargs["language_code"] = language_code
     if keyterms:
         scribe_kwargs["keyterms"] = keyterms
 
     result = eleven.speech_to_text.convert(**scribe_kwargs)
 
     transcript = (result.text or "").strip()
-    detected_lang = getattr(result, "language_code", language_code) or language_code
     elapsed = time.time() - t_start
     logger.info(
         f"Scribe [{condition}] transcript: '{transcript[:100]}' "
-        f"lang={detected_lang} keyterms={len(keyterms)} elapsed={elapsed:.3f}s"
+        f"keyterms={len(keyterms)} elapsed={elapsed:.3f}s"
     )
-    return {"raw_transcript": transcript, "detected_language": detected_lang}
+    return {"raw_transcript": transcript}
 
 
 # ─── Tool 2: Correct — Gemini reasoning ──────────────────────────────────────
@@ -232,21 +224,19 @@ def correct_speech(
     raw_transcript: str,
     condition: str,
     pattern_summary: str | None = None,
-    detected_language: str = "en",
 ) -> dict:
     """
-    Takes the raw transcript and reconstructs the most likely intended sentence.
+    Takes the raw transcript and reconstructs the most likely intended English sentence.
     Uses Gemini to reason about the intended meaning.
     Call this after transcribe_audio.
 
     Args:
         raw_transcript: The raw text output from transcribe_audio.
         condition: Speech condition — helps Gemini apply the right corrections.
-        detected_language: ISO 639-1 language code detected by transcription.
     """
     import time
     t_start = time.time()
-    logger.debug(f"Starting correction [{condition}] lang={detected_language}: '{raw_transcript[:80]}'")
+    logger.debug(f"Starting correction [{condition}]: '{raw_transcript[:80]}'")
     
     condition_hints = {
         "dysarthria": (
@@ -280,34 +270,24 @@ def correct_speech(
     """
         logger.debug("Injecting personalised pattern summary into correction prompt")
 
-    lang_instruction = (
-        f"The transcript is in {detected_language}. "
-        "You MUST return the corrected text in the SAME language as the transcript. "
-        "Do NOT translate it into English or any other language."
-        if detected_language not in ("en", "auto")
-        else ""
-    )
-
     prompt = f"""You are a speech correction specialist helping people with speech disabilities communicate clearly.
 
 Condition: {condition}
 Context: {hint}
 {personalisation_block}
-{lang_instruction}
 
 Raw transcript (what the speech recognition heard):
 "{raw_transcript}"
 
 Your task:
 1. Identify what the speaker most likely intended to say
-2. Return a single clean, natural sentence in the SAME language as the transcript — no fragments, no repetitions
+2. Return a single clean, natural English sentence — no fragments, no repetitions
 3. Preserve their exact meaning and tone — do not add or remove ideas
 4. If the transcript is too unclear to correct confidently, return your best guess with low confidence
-5. Write the "changes" list in English regardless of transcript language
 
 Respond ONLY with valid JSON in this exact format:
 {{
-  "corrected_text": "the corrected sentence here (same language as input)",
+  "corrected_text": "the corrected sentence here",
   "confidence": 0.87,
   "changes": ["removed stutter on 'ca-can'", "restored word 'water'"]
 }}"""
@@ -405,7 +385,6 @@ def _run_pipeline_sync(
     voice_id: str,
     pattern_summary: str | None = None,
     keyterms_override: list | None = None,
-    language_code: str = "auto",
 ) -> dict:
     import time
     pipeline_start = time.time()
@@ -423,17 +402,15 @@ def _run_pipeline_sync(
     except Exception as exc:
         logger.warning(f"Audio isolation failed ({exc}) — using raw audio")
 
-    # ── Step 1: Transcribe ────────────────────────────────────────────────
+    # ── Step 1: Transcribe (English) ─────────────────────────────────────
     t = _normalize_tool_result(
         transcribe_audio.invoke({
             "audio_b64":         audio_b64,
             "condition":         condition,
             "keyterms_override": keyterms_override,
-            "language_code":     language_code,
         })
     )
     raw = t.get("raw_transcript", "")
-    detected_lang = t.get("detected_language", language_code)
 
     # ── Step 2: Correct ───────────────────────────────────────────────────
     c = _normalize_tool_result(
@@ -441,7 +418,6 @@ def _run_pipeline_sync(
             "raw_transcript":    raw,
             "condition":         condition,
             "pattern_summary":   pattern_summary,
-            "detected_language": detected_lang,
         })
     )
     corrected = c.get("corrected_text", "")
@@ -462,7 +438,6 @@ def _run_pipeline_sync(
         "audio_b64":         v.get("audio_b64"),
         "audio_format":      v.get("format", "mp3"),
         "gemini_key_used":   key_manager.active_index + 1,
-        "detected_language": detected_lang,
     }
 
 
@@ -474,12 +449,8 @@ async def run_agent(
     voice_id: str = DEFAULT_VOICE_ID,
     pattern_summary: str | None = None,
     keyterms_override: list | None = None,
-    language_code: str = "auto",
 ) -> dict:
-    """
-    Called by FastAPI. Runs the full pipeline and returns a clean result dict.
-    language_code: ISO 639-1 code or "auto" for auto-detection.
-    """
+    """Called by FastAPI. Runs the full pipeline (English only) and returns a clean result dict."""
     prev = key_manager.active_index
     try:
         return await asyncio.to_thread(
@@ -489,13 +460,12 @@ async def run_agent(
             voice_id,
             pattern_summary,
             keyterms_override,
-            language_code,
         )
     except Exception:
         if key_manager.active_index != prev:
             logger.warning("Key rotated mid-run — retrying pipeline once")
             return await asyncio.to_thread(
                 _run_pipeline_sync, audio_b64, condition, voice_id,
-                pattern_summary, keyterms_override, language_code,
+                pattern_summary, keyterms_override,
             )
         raise

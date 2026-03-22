@@ -62,4 +62,16 @@ export default defineSchema({
     .index("by_user_id",     ["user_id", "version"])
     .index("by_user_latest", ["user_id", "created_at"]),
 
+
+  // ── telegram_users ─────────────────────────────────────────────────────────
+  // Telegram MTProto listener: ElevenLabs voice_id per Telegram user (not Clerk).
+  telegram_users: defineTable({
+    tg_user_id: v.string(),
+    tg_username: v.optional(v.string()),
+    voice_id: v.optional(v.string()),
+    condition: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_tg_user_id", ["tg_user_id"]),
+
 });

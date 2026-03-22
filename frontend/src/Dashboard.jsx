@@ -1,6 +1,8 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { ONBOARDING_BY_CONDITION } from "./onboarding/onboardingData.js";
+import { VoiceCloneRecorder } from "./VoiceCloneRecorder.jsx";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -282,6 +284,7 @@ function DonutChart({ data }) {
 
 export function Dashboard({ userId }) {
   const profile = useQuery(api.users.me);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const sessions = useQuery(
     api.sessions.listByUser,
     userId && userId !== "anonymous" ? { user_id: userId, limit: 200 } : "skip",
@@ -402,6 +405,46 @@ export function Dashboard({ userId }) {
             </div>
           ) : (
             <p className="dash-chart-empty">No sessions yet</p>
+          )}
+        </div>
+
+        {/* Voice clone */}
+        <div className="dash-card dash-card--wide">
+          <h3 className="dash-card-title">Your voice</h3>
+          {showVoiceRecorder ? (
+            <VoiceCloneRecorder
+              userId={userId}
+              script={
+                ONBOARDING_BY_CONDITION[profile?.condition ?? "general"]?.voiceScript ??
+                ONBOARDING_BY_CONDITION.general.voiceScript
+              }
+              existingVoice={!!profile?.voice_id}
+              onComplete={() => setShowVoiceRecorder(false)}
+            />
+          ) : profile?.voice_id ? (
+            <div className="dash-voice-status">
+              <span className="dash-voice-active">Custom voice active</span>
+              <button
+                type="button"
+                className="btn btn--ghost dash-voice-update-btn"
+                onClick={() => setShowVoiceRecorder(true)}
+              >
+                Update voice
+              </button>
+            </div>
+          ) : (
+            <div className="dash-voice-status">
+              <p className="dash-card-sub">
+                Clone your voice so the output audio sounds like you.
+              </p>
+              <button
+                type="button"
+                className="btn btn--primary dash-voice-clone-btn"
+                onClick={() => setShowVoiceRecorder(true)}
+              >
+                Clone my voice
+              </button>
+            </div>
           )}
         </div>
 
