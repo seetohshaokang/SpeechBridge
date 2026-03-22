@@ -16,6 +16,7 @@ export function useAudioRecorder() {
   const mediaRecorder = useRef(null);
   const chunks = useRef([]);
   const timer = useRef(null);
+  const startTime = useRef(null);
   const resolveBlob = useRef(null);
 
   const audioCtx = useRef(null);
@@ -80,9 +81,11 @@ export function useAudioRecorder() {
     setIsRecording(true);
     setSeconds(0);
 
+    clearInterval(timer.current);
+    startTime.current = Date.now();
     timer.current = setInterval(() => {
-      setSeconds((s) => s + 1);
-    }, 1000);
+      setSeconds(Math.floor((Date.now() - startTime.current) / 1000));
+    }, 250);
   }, []);
 
   const stop = useCallback(() => {
