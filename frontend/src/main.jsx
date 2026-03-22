@@ -24,7 +24,16 @@ const convex = new ConvexReactClient(convexUrl);
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <ClerkProvider publishableKey={clerkPublishableKey}>
+    <ClerkProvider
+      publishableKey={clerkPublishableKey}
+      appearance={{
+        options: {
+          // Hides the yellow “Development mode” strip while still on pk_test_ keys.
+          // Clerk docs: preview production UI only — switch to pk_live_ for real prod.
+          unsafe_disableDevelopmentModeWarnings: true,
+        },
+      }}
+    >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <App />
       </ConvexProviderWithClerk>
