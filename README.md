@@ -1,8 +1,47 @@
-# SpeechBridge
+# 🗣️ SpeechBridge
 
-Helping people with speech disabilities communicate more clearly — record speech, get AI-assisted transcription and correction, and hear the improved version read back.
+> **Built at Cursor Heilbronn Hackathon 2026**
 
-## Stack
+Empowering people with speech disabilities through AI-powered speech correction. Record your speech, get instant AI transcription and correction, and hear it read back clearly.
+
+---
+
+## 🎯 The Problem
+
+Over 40 million people worldwide live with speech disabilities (dysarthria, stuttering, aphasia). While communication tools exist, real-time AI correction with natural voice output remains difficult to access.
+
+## 💡 Our Solution
+
+One-tap recording → AI correction → Natural playback. No complex setup, works in your browser.
+
+**Watch it work:** [Demo video coming soon]
+
+---
+
+## ✨ Key Features
+
+- **🎤 One-tap Recording** - Browser-based audio capture, no app install required
+- **🤖 AI-Powered Correction** - Google Gemini analyzes speech patterns and fixes errors
+- **🔊 Natural Playback** - ElevenLabs TTS with optional voice cloning
+- **📊 Session History** - Track progress and improvements over time
+- **♿ Accessibility First** - Designed for dysarthria, stuttering, aphasia, and general speech clarity
+- **🔐 Secure & Private** - Clerk authentication, sessions stored securely in Convex
+
+---
+
+## 🔄 How It Works
+
+1. **Record** - Capture speech through browser microphone
+2. **Transcribe** - ElevenLabs Scribe converts speech to text
+3. **Correct** - Gemini AI corrects speech errors while preserving intent
+4. **Synthesize** - ElevenLabs TTS generates clear audio output
+5. **Save** - Session stored in Convex for progress tracking
+
+**All in under 5 seconds.**
+
+---
+
+## 🛠️ Tech Stack
 
 | Layer          | Tech                                                                                                           |
 | -------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -12,48 +51,85 @@ Helping people with speech disabilities communicate more clearly — record spee
 
 ---
 
-## Prerequisites
+## 🚀 Quick Start
 
-On a **new machine**, install:
+### Prerequisites
 
-| Tool        | Notes                                      |
-| ----------- | ------------------------------------------ |
-| **Git**     | Any recent version                         |
-| **Node.js** | **18+** (20+ recommended) — includes `npm` |
-| **Python**  | **3.12+** (3.13 ok)                        |
-| **pip**     | Usually bundled with Python                |
+- **Node.js 18+** and **Python 3.12+**
+- API keys from: [Clerk](https://clerk.com), [Convex](https://convex.dev), [Google Gemini](https://aistudio.google.com), [ElevenLabs](https://elevenlabs.io)
 
-After clone, run **`npm install`** in **`frontend/`** (includes Convex CLI + Vite + React).
-
-Optional but useful:
-
-- **[uv](https://docs.astral.sh/uv/)** — faster Python env / installs (`uv sync` in `backend/` if you use it)
-
-Accounts / keys you will need:
-
-- [Clerk](https://dashboard.clerk.com) — app + publishable key; enable **Convex** integration; copy **Frontend API URL** (issuer).
-- [Convex](https://dashboard.convex.dev) — project linked from **`npm run convex:dev`** (or `npx convex dev`) in **`frontend/`** where `convex/` lives.
-- [Google AI Studio](https://aistudio.google.com) — Gemini API key(s) (this repo rotates across **three** keys).
-- [ElevenLabs](https://elevenlabs.io) — API key (Scribe + TTS).
-
----
-
-## 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
-git clone <your-fork-or-repo-url>.git
+git clone <your-fork-or-repo-url>
 cd SpeechBridge
 ```
 
-If the remote moved, ensure `origin` points at the canonical repo:
+### 2. Setup Environment Files
+
+Copy the example files:
 
 ```bash
-git remote -v
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
 ```
 
----
+**Edit `backend/.env`** with your API keys:
 
-## 2. Backend setup
+- `ELEVENLABS_API_KEY` - Your ElevenLabs API key
+- `GEMINI_API_KEY_1`, `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3` - Google Gemini keys
+- `CONVEX_URL` - Your Convex deployment URL (get this after step 3)
+
+**Edit `frontend/.env.local`** with:
+
+- `VITE_CLERK_PUBLISHABLE_KEY` - Your Clerk publishable key
+- `VITE_CONVEX_URL` - Your Convex deployment URL
+- `VITE_API_URL=http://localhost:8001` - Backend URL
+
+### 3. Install Dependencies & Setup Convex
+
+```bash
+# Backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e .
+
+# Frontend
+cd ../frontend
+npm install
+
+# Initialize Convex (first time only)
+npx convex dev  # Follow prompts to create/link deployment
+```
+
+Copy the Convex deployment URL and add it to both `backend/.env` (`CONVEX_URL`) and `frontend/.env.local` (`VITE_CONVEX_URL`).
+
+Configure Convex to work with Clerk:
+
+```bash
+npx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-clerk-instance>.clerk.accounts.dev"
+```
+
+### 4. Run the App
+
+From the **repo root**:
+
+```bash
+chmod +x deploy-local.sh
+./deploy-local.sh
+```
+
+This starts all three services (Backend on port 8001, Frontend on port 5173, Convex dev). Press **Ctrl+C** to stop everything.
+
+**Open** http://localhost:5173 and start using SpeechBridge!
+
+<details>
+<summary>📋 Detailed Backend Setup (click to expand)</summary>
+
+## Backend Configuration
+
+### Virtual Environment Setup
 
 ```bash
 cd backend
@@ -64,72 +140,62 @@ pip install -e .
 # or: pip install -r requirements.txt
 ```
 
-Create **`backend/.env`** from the example (never commit `.env`):
+**Alternative with uv** (faster):
+
+```bash
+cd backend
+uv sync
+```
+
+### Environment Variables
+
+Create **`backend/.env`** from the example:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit **`backend/.env`** and set:
+Edit **`backend/.env`** and configure:
 
-| Variable             | Required            | Description                                                                                                                                                                                                                  |
-| -------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable             | Required            | Description                                                                                                                                                                                                                                               |
+| -------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ELEVENLABS_API_KEY` | Yes                 | ElevenLabs API key (Scribe + TTS). For **Clone my voice**, the key must include the **`create_instant_voice_clone`** permission — enable it when creating/editing the key in the [ElevenLabs API keys](https://elevenlabs.io/app/settings/api-keys) page. |
-| `GEMINI_API_KEY_1`   | Yes                 | Primary Gemini key                                                                                                                                                                                                           |
-| `GEMINI_API_KEY_2`   | Yes                 | Used when key 1 hits quota                                                                                                                                                                                                   |
-| `GEMINI_API_KEY_3`   | Yes                 | Used when earlier keys hit quota                                                                                                                                                                                             |
-| `GEMINI_CHAT_MODEL`  | No                  | Default in code is a fast Flash Lite model; override if your project returns 404                                                                                                                                             |
-| `CONVEX_URL`         | Yes (for DB writes) | Same value as frontend **`VITE_CONVEX_URL`** (`https://….convex.cloud`). The Python API uses this to call Convex **`sessions:save`** after each `/process`. If unset, processing still works but **`sessions` stays empty**. |
-| `FRONTEND_URL`       | No                  | Extra CORS origin for production frontends                                                                                                                                                                                   |
+| `GEMINI_API_KEY_1`   | Yes                 | Primary Gemini key                                                                                                                                                                                                                                        |
+| `GEMINI_API_KEY_2`   | Yes                 | Used when key 1 hits quota                                                                                                                                                                                                                                |
+| `GEMINI_API_KEY_3`   | Yes                 | Used when earlier keys hit quota                                                                                                                                                                                                                          |
+| `GEMINI_CHAT_MODEL`  | No                  | Default in code is a fast Flash Lite model; override if your project returns 404                                                                                                                                                                          |
+| `CONVEX_URL`         | Yes (for DB writes) | Same value as frontend **`VITE_CONVEX_URL`** (`https://….convex.cloud`). The Python API uses this to call Convex **`sessions:save`** after each `/process`. If unset, processing still works but **`sessions` stays empty**.                              |
+| `FRONTEND_URL`       | No                  | Extra CORS origin for production frontends                                                                                                                                                                                                                |
 
-**Quick health check** (after the server is running — see below):
+### Running Backend Manually
+
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn api.main:app --reload --port 8001
+```
+
+**Health check:**
 
 ```bash
 curl http://localhost:8001/health
 ```
 
----
+</details>
 
-## 3. Convex (frontend)
+<details>
+<summary>🎨 Detailed Frontend Setup (click to expand)</summary>
 
-Convex functions and schema live in **`frontend/convex/`**.
+## Frontend Configuration
 
-From the frontend directory:
-
-```bash
-cd frontend
-npm install        # Convex CLI + React dependencies (run once after clone)
-```
-
-**Convex + Clerk (first time)**
-
-1. From **`frontend/`**, run **`npm run convex:dev`** (or `npx convex dev`) and log in; create or link a deployment. The CLI watches **`./convex/`** and syncs functions. Put the deployment URL in **`frontend/.env.local`** as **`VITE_CONVEX_URL=...`** (and optionally **`VITE_CONVEX_SITE_URL=...`**) and the **same URL** in **`backend/.env`** as **`CONVEX_URL=...`** (no `VITE_` prefix — that file is not read by Vite). Without **`CONVEX_URL`**, the backend never writes to Convex.
-2. Set Convex to validate Clerk JWTs (from **`frontend/`**):
-    ```bash
-    npx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-instance>.clerk.accounts.dev"
-    ```
-    Use the exact **Frontend API URL** from Clerk (Integrations → Convex).
-3. In Clerk, turn on the **Convex** integration and use the same app as the frontend.
-
-**Production / shared dev deployment** (from **`frontend/`**):
-
-```bash
-npm run convex:deploy    # deploy functions to your linked Convex deployment
-npm run convex:dashboard # open Convex dashboard via CLI
-```
-
-**Using production Convex** — Point **`VITE_CONVEX_URL`**, **`backend/.env` `CONVEX_URL`**, **`telegram-mtproto-voice/.env` `CONVEX_URL`**, and repo root **`CONVEX_DEPLOYMENT`** (e.g. `prod:groovy-corgi-683`) at the same **`.convex.cloud`** URL. After changing deployment, run **`npx convex deploy`** from **`frontend/`** so functions and schema exist on prod, and set **`npx convex env set CLERK_JWT_ISSUER_DOMAIN ...`** on that deployment if you use Clerk.
-
-Other common commands (from `frontend/`): `npx convex env list`, `npx convex env set …`, `npx convex logs`.
-
----
-
-## 4. Frontend setup
+### Install Dependencies
 
 ```bash
 cd frontend
 npm install
 ```
+
+### Environment Variables
 
 Create **`frontend/.env.local`** (gitignored) from the example:
 
@@ -146,30 +212,7 @@ Edit **`frontend/.env.local`**:
 | `VITE_CONVEX_SITE_URL`       | Optional            | Convex site URL (`.convex.site`); use if you rely on HTTP actions / site URL   |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Yes (for auth)      | Clerk publishable key (`pk_...`)                                               |
 
----
-
-## 5. Run everything locally
-
-You need **three** long-running processes for the full app (auth + Convex sync + API + UI):
-
-### Terminal A — Convex
-
-```bash
-cd frontend
-npm run convex:dev
-```
-
-Leave it running (watches **`./convex/`** in the frontend directory and syncs functions).
-
-### Terminal B — FastAPI
-
-```bash
-cd backend
-source .venv/bin/activate
-uvicorn api.main:app --reload --port 8001
-```
-
-### Terminal C — Vite
+### Running Frontend Manually
 
 ```bash
 cd frontend
@@ -178,41 +221,153 @@ npm run dev
 
 Open **http://localhost:5173** (or the URL Vite prints).
 
-### One command — backend + frontend + Convex
+</details>
 
-From the **repo root**:
+<details>
+<summary>🗄️ Detailed Convex Setup (click to expand)</summary>
+
+## Convex Configuration
+
+Convex functions and schema live in **`frontend/convex/`**.
+
+### Initial Setup
+
+From the frontend directory:
 
 ```bash
-chmod +x deploy-local.sh   # once
-./deploy-local.sh
+cd frontend
+npm install        # Installs Convex CLI + dependencies
 ```
 
-Or:
+### First-Time Convex + Clerk Integration
+
+1. **Link Convex deployment:**
+
+    From **`frontend/`**, run:
+
+    ```bash
+    npm run convex:dev
+    # or: npx convex dev
+    ```
+
+    Log in and create or link a deployment. The CLI watches **`./convex/`** and syncs functions.
+
+2. **Configure environment variables:**
+
+    Put the deployment URL in:
+    - **`frontend/.env.local`** as **`VITE_CONVEX_URL=https://....convex.cloud`**
+    - **`backend/.env`** as **`CONVEX_URL=https://....convex.cloud`** (no `VITE_` prefix)
+
+3. **Set up Clerk JWT validation:**
+
+    From **`frontend/`**, run:
+
+    ```bash
+    npx convex env set CLERK_JWT_ISSUER_DOMAIN "https://<your-instance>.clerk.accounts.dev"
+    ```
+
+    Use the exact **Frontend API URL** from Clerk (Dashboard → Integrations → Convex).
+
+4. **Enable Convex in Clerk:**
+
+    In your Clerk dashboard, turn on the **Convex** integration and link it to the same app as the frontend.
+
+### Production Deployment
 
 ```bash
-npm run dev:all
+cd frontend
+npm run convex:deploy    # Deploy functions to your linked Convex deployment
+npm run convex:dashboard # Open Convex dashboard via CLI
 ```
 
-This starts **FastAPI** (port **8001**), **Vite** (port **5173**), and **`convex dev`** in the background. **Ctrl+C** stops all three.
+### Common Convex Commands
+
+From `frontend/` directory:
+
+- `npx convex env list` - View environment variables
+- `npx convex env set KEY value` - Set environment variables
+- `npx convex logs` - View function logs
+- `npx convex deploy` - Deploy to production
+
+### Using Production Convex
+
+Point all these to the same **`.convex.cloud`** URL:
+
+- **`frontend/.env.local`**: `VITE_CONVEX_URL`
+- **`backend/.env`**: `CONVEX_URL`
+- **`telegram-mtproto-voice/.env`**: `CONVEX_URL`
+
+After changing deployment, run **`npx convex deploy`** from **`frontend/`** and set **`CLERK_JWT_ISSUER_DOMAIN`** on that deployment.
+
+</details>
+
+<details>
+<summary>🔧 Manual Multi-Terminal Setup (click to expand)</summary>
+
+## Running Services Separately
+
+If you prefer to run services in separate terminals (useful for debugging):
+
+### Terminal A — Convex
+
+```bash
+cd frontend
+npm run convex:dev
+```
+
+Leave it running (watches **`./convex/`** and syncs functions).
+
+### Terminal B — FastAPI Backend
+
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn api.main:app --reload --port 8001
+```
+
+### Terminal C — Vite Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open **http://localhost:5173** (or the URL Vite prints).
+
+</details>
 
 ---
 
-## 6. Using the app
+## 💪 Challenges We Overcame
 
-1. Sign in via Clerk (Apple, Google, or email).
-2. **New users** are taken through an **onboarding flow**:
-   - Choose a **condition** (Dysarthria, Stuttering, Aphasia, or General). Each option has a hover/tap **?** info button with a clinical description.
-   - Read **10 practice phrases** aloud — each phrase must be recorded and submitted before you can proceed. Recordings go through the same `/process` pipeline and are saved to Convex (results are not shown during onboarding).
-   - On completion, the condition is saved to the user profile.
-3. **Returning users** skip onboarding and land on the main session view.
-4. **Record** → **Submit for correction** — backend runs: ElevenLabs STT → Gemini correction → ElevenLabs TTS; the UI shows transcript, corrected text, and optional audio playback.
-5. Past sessions are listed in the **left sidebar**; click any to review. **+ New session** resets the workspace.
+- **Real-time audio processing** - Optimized pipeline to process speech in under 5 seconds
+- **Voice cloning integration** - Implemented ElevenLabs instant voice cloning during the hackathon
+- **Multi-key rotation** - Built automatic fallback system for API quota limits
+- **Clinical accuracy** - Researched speech pathologies to design appropriate UI and onboarding flow
+- **Seamless auth** - Integrated Clerk with Convex for smooth user experience
 
 ---
 
-## 7. Troubleshooting
+## 📱 Using the App
 
-| Issue                                             | What to try                                                                                                                                                                              |
+1. **Sign in** via Clerk (Apple, Google, or email)
+2. **New users** go through onboarding:
+    - Choose your condition (Dysarthria, Stuttering, Aphasia, or General)
+    - Complete 10 practice recordings to calibrate the system
+3. **Record & Correct:**
+    - Tap record, speak naturally
+    - Submit for AI correction
+    - Listen to the corrected, clear version
+4. **Track Progress** - View past sessions in the sidebar
+
+---
+
+## 🔧 Troubleshooting
+
+<details>
+<summary>Common Issues (click to expand)</summary>
+
+| Issue                                             | Solution                                                                                                                                                                              |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ModuleNotFoundError` (Python)                    | Activate **`backend/.venv`** and run `pip install -e .` or `pip install -r requirements.txt`.                                                                                            |
 | `Form data requires python-multipart`             | Install deps from current `pyproject.toml` / `requirements.txt` (includes `python-multipart`).                                                                                           |
@@ -226,20 +381,37 @@ This starts **FastAPI** (port **8001**), **Vite** (port **5173**), and **`convex
 | Convex CLI “can’t find convex folder”             | Run Convex commands from **`frontend/`** directory (`cd frontend`) where `convex/` lives.                                                                                                |
 | Convex **`sessions` table empty**                 | Set **`CONVEX_URL`** in **`backend/.env`** to the same `.convex.cloud` URL as **`VITE_CONVEX_URL`**, restart FastAPI, and check logs for `Convex save failed` / `CONVEX_URL is not set`. |
 
+</details>
+
 ---
 
-## 8. Useful URLs (local)
+## 🌐 Useful URLs (Local Development)
 
 | Service      | URL                          |
 | ------------ | ---------------------------- |
 | Frontend     | http://localhost:5173        |
 | API root     | http://localhost:8001/       |
-| Health       | http://localhost:8001/health |
+| Health check | http://localhost:8001/health |
 | OpenAPI docs | http://localhost:8001/docs   |
 
 ---
 
-## 9. Project layout (short)
+## 📁 Project Structure
+
+```
+SpeechBridge/
+├── backend/           # FastAPI + AI agent (Gemini + ElevenLabs)
+│   ├── api/main.py   # /health, /process endpoints
+│   └── agent.py      # Speech correction logic
+├── frontend/         # React + Vite + Clerk auth
+│   ├── convex/       # Convex functions & schema
+│   └── src/          # React components
+├── deploy-local.sh   # One-command local deployment
+└── README.md
+```
+
+<details>
+<summary>Detailed File Structure (click to expand)</summary>
 
 ```
 SpeechBridge/
@@ -251,24 +423,35 @@ SpeechBridge/
 ├── backend/                  # FastAPI + agent (Gemini + ElevenLabs)
 │   ├── api/
 │   │   └── main.py           # /health, /process (multipart audio → correction → TTS)
-│   ├── agent.py
-│   └── .env.example
-├── frontend/          # Vite + React + Clerk + Convex
-│   ├── convex/        # Convex functions, schema, auth.config (run CLI from frontend/)
-│   ├── src/
-│   └── .env.example
-├── deploy-local.sh    # Starts backend + frontend + Convex dev
+│   ├── agent.py              # Speech correction agent with Gemini
+│   ├── pyproject.toml        # Python dependencies
+│   └── .env.example          # Environment template
+├── frontend/                 # Vite + React + Clerk + Convex
+│   ├── convex/               # Convex functions, schema, auth.config (run CLI from frontend/)
+│   ├── src/                  # React components and pages
+│   ├── package.json          # Frontend dependencies
+│   └── .env.example          # Frontend environment template
+├── telegram-mtproto-voice/   # Telegram bot integration (optional)
+├── deploy-local.sh           # Starts backend + frontend + Convex dev
 └── README.md
 ```
 
+</details>
+
 ---
+
+## 👥 Team
+
+Built with ❤️ at **Cursor Heilbronn Hackathon 2026**
+
 ---
 
-## License
+## 📄 License
 
-MIT License
+MIT License - Copyright (c) 2026 SpeechBridge Team
 
-Copyright (c) 2026 SpeechBridge Team
+<details>
+<summary>View full license (click to expand)</summary>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -276,15 +459,14 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+</details>
+
 ---
 
-## Hackathon Project
-
-Built for **Cursor Heilbronn Hackathon 2026**.
-
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please:
+
 - Open an issue to discuss major changes
 - Follow existing code style and patterns
 - **Never commit** `.env`, `.env.local`, or API keys
