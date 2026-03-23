@@ -45,7 +45,8 @@ One-tap recording → AI correction → Natural playback. No complex setup, work
 
 ## Demo Video
 
-<video controls width="100%" src="demo/SpeechBridge-Demo-Video.mp4"></video>
+<video controls width="100%" src="demo/SpeechBridge-Demo-Video.mp4?raw=1"></video>
+<!-- GitHub README embeds work best with raw URLs. -->
 
 ## 🛠️ Tech Stack
 
