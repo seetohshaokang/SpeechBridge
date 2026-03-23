@@ -14,7 +14,7 @@ Over 40 million people worldwide live with speech disabilities (dysarthria, stut
 
 One-tap recording → AI correction → Natural playback. No complex setup, works in your browser.
 
-**Watch it work:** [Demo video coming soon]
+**Watch it work:** [SpeechBridge Demo Video.mp4](../../SpeechBridge%20Demo%20Video/SpeechBridge%20Demo%20Video.mp4)
 
 **Try it now:** [https://speech-bridge.vercel.app](https://speech-bridge.vercel.app) (no local setup required!)
 
@@ -42,6 +42,11 @@ One-tap recording → AI correction → Natural playback. No complex setup, work
 **All in under 5 seconds.**
 
 ---
+
+## Demo Video
+
+Local-only link to the 3-minute demo video:
+- [SpeechBridge Demo Video.mp4](../../SpeechBridge%20Demo%20Video/SpeechBridge%20Demo%20Video.mp4)
 
 ## 🛠️ Tech Stack
 
